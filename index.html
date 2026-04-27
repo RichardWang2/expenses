@@ -1,0 +1,1585 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, maximum-scale=1.0, user-scalable=no" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Ledger" />
+<meta name="theme-color" content="#f4ede0" />
+<title>Ledger</title>
+<link rel="manifest" href="manifest.json" />
+<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
+<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;1,9..144,300;1,9..144,400&family=Work+Sans:wght@300;400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #f4ede0;
+    --cream-deep: #ebe1cd;
+    --ink: #2a2418;
+    --ink-soft: #4a3f25;
+    --sage: #8a7a5a;
+    --sage-soft: #a99975;
+    --line: #d8ccaa;
+    --line-soft: #e4d9bc;
+    --over: #a04020;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--cream);
+    color: var(--ink);
+    font-family: 'Work Sans', -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    overscroll-behavior: none;
+  }
+
+  body {
+    min-height: 100vh;
+    min-height: 100dvh;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  button { font-family: inherit; cursor: pointer; border: none; background: none; color: inherit; }
+  input { font-family: inherit; border: none; background: none; outline: none; color: inherit; }
+
+  /* ---------- LAYOUT ---------- */
+  .app { max-width: 480px; margin: 0 auto; min-height: 100vh; min-height: 100dvh; position: relative; }
+
+  .view { padding: 28px 28px 120px; min-height: 100vh; min-height: 100dvh; }
+
+  /* desktop-only blocks hidden by default (mobile-first) */
+  .desktop-only { display: none; }
+
+  /* ---------- HEADER ---------- */
+  .top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 32px;
+  }
+  .top-mark {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px; letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--sage);
+  }
+  .top-icon {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sage); font-size: 18px;
+  }
+  .top-icon:active { color: var(--ink); }
+
+  /* ---------- TODAY VIEW ---------- */
+  .day-italic {
+    font-family: 'Fraunces', serif;
+    font-style: italic; font-weight: 300;
+    font-size: 14px; color: var(--sage);
+    margin-bottom: 6px;
+  }
+  .date-line {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 30px; letter-spacing: -0.01em;
+    line-height: 1.1; margin-bottom: 40px;
+    color: var(--ink);
+  }
+
+  .label-mono {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 6px;
+  }
+
+  .amount-big {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 92px;
+    letter-spacing: -0.04em;
+    line-height: 0.95;
+    color: var(--ink);
+    margin-bottom: 10px;
+  }
+  .amount-big sup {
+    font-size: 32px;
+    vertical-align: top;
+    color: var(--sage);
+    margin-right: 4px;
+    font-weight: 300;
+    top: 0.1em;
+    position: relative;
+  }
+  .amount-big.dim { color: var(--sage-soft); }
+
+  .status-line {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 17px;
+    line-height: 1.4;
+    color: var(--ink-soft);
+    margin-bottom: 36px;
+  }
+  .status-line.over { color: var(--over); }
+
+  /* ---------- PROGRESS ---------- */
+  .progress-wrap { margin-bottom: 40px; }
+  .progress-track {
+    height: 1px;
+    background: var(--line);
+    position: relative;
+    margin-bottom: 12px;
+  }
+  .progress-fill {
+    position: absolute; top: -1px; left: 0;
+    height: 3px;
+    background: var(--ink);
+    transition: width 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
+  }
+  .progress-fill.over { background: var(--over); }
+  .progress-meta {
+    display: flex; justify-content: space-between;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--sage);
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+  }
+
+  /* ---------- RECENT ---------- */
+  .section-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 14px;
+  }
+  .recent-row {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 0;
+    border-bottom: 1px solid var(--line-soft);
+    transition: opacity 0.2s;
+    width: 100%;
+    text-align: left;
+  }
+  .recent-row:last-child { border-bottom: none; }
+  .recent-row:active { opacity: 0.5; }
+  .recent-day {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    color: var(--sage);
+    letter-spacing: 0.08em;
+  }
+  .recent-amt {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    font-weight: 400;
+  }
+  .empty-state {
+    font-family: 'Fraunces', serif;
+    font-style: italic; font-size: 15px;
+    color: var(--sage); padding: 20px 0;
+  }
+
+  /* ---------- FAB ---------- */
+  .fab {
+    position: fixed;
+    bottom: calc(28px + env(safe-area-inset-bottom));
+    right: max(28px, calc((100vw - 480px) / 2 + 28px));
+    width: 60px; height: 60px;
+    border-radius: 50%;
+    background: var(--ink); color: var(--cream);
+    display: flex; align-items: center; justify-content: center;
+    font-family: 'Fraunces', serif;
+    font-weight: 300; font-size: 32px;
+    box-shadow: 0 8px 24px rgba(42, 36, 24, 0.25);
+    transition: transform 0.15s ease;
+    z-index: 10;
+  }
+  .fab:active { transform: scale(0.92); }
+
+  /* ---------- ENTRY SHEET ---------- */
+  .sheet {
+    position: fixed; inset: 0;
+    background: var(--cream);
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    display: flex; flex-direction: column;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    visibility: hidden;
+  }
+  .sheet.open { transform: translateY(0); visibility: visible; }
+
+  .sheet-inner {
+    max-width: 480px;
+    width: 100%;
+    margin: 0 auto;
+    padding: 28px 28px 40px;
+    flex: 1;
+    display: flex; flex-direction: column;
+  }
+
+  .sheet-top {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 60px;
+  }
+  .sheet-cancel {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sage);
+    padding: 4px 0;
+  }
+  .sheet-cancel:active { color: var(--ink); }
+  .sheet-delete {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px; text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--over);
+    padding: 4px 0;
+  }
+  .sheet-delete.hide { visibility: hidden; }
+
+  .sheet-q {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 24px;
+    line-height: 1.3;
+    color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .sheet-sub {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 44px;
+  }
+
+  .input-row {
+    display: flex; align-items: baseline;
+    border-bottom: 1px solid var(--line);
+    padding-bottom: 8px;
+    margin-bottom: 8px;
+    cursor: text;
+    min-height: 96px;
+  }
+  .input-currency {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 40px;
+    color: var(--sage);
+    margin-right: 10px;
+  }
+  .input-amount {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 84px;
+    letter-spacing: -0.03em;
+    color: var(--ink);
+    width: 100%;
+    line-height: 1;
+    padding: 0;
+    -webkit-appearance: none;
+    appearance: none;
+  }
+  .input-amount::placeholder { color: var(--line); }
+  .input-hint {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--sage);
+    margin-bottom: 36px;
+  }
+
+  /* ---------- DAY ENTRIES LIST (in entry sheet) ---------- */
+  .day-entries { margin-bottom: 28px; }
+  .day-entries:empty { display: none; }
+  .day-entries-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 10px;
+  }
+  .day-entry-row {
+    display: grid;
+    grid-template-columns: 1fr auto;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid var(--line-soft);
+    text-align: left;
+    width: 100%;
+    transition: background 0.15s;
+  }
+  .day-entry-row:hover { background: rgba(216,204,170,0.15); }
+  .day-entry-row.editing {
+    background: var(--cream-deep);
+    margin: 0 -12px;
+    padding: 10px 12px;
+    border-radius: 4px;
+    border-bottom-color: transparent;
+  }
+  .day-entry-meta {
+    display: flex; flex-direction: column; gap: 2px;
+    min-width: 0;
+  }
+  .day-entry-cat {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--sage);
+    display: flex; align-items: center;
+  }
+  .day-entry-note {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink-soft);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+  .day-entry-amt {
+    font-family: 'Fraunces', serif;
+    font-size: 18px;
+    color: var(--ink);
+  }
+
+  /* ---------- CATEGORY PILLS ---------- */
+  .cat-block { margin-bottom: 28px; }
+  .cat-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 12px;
+  }
+  .cat-pills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+  .cat-pill {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.12em;
+    color: var(--ink-soft);
+    padding: 9px 14px;
+    border: 1px solid var(--line);
+    border-radius: 100px;
+    background: transparent;
+    transition: background 0.15s, border-color 0.15s, color 0.15s;
+  }
+  .cat-pill:active { transform: scale(0.96); }
+  .cat-pill.selected {
+    background: var(--ink);
+    color: var(--cream);
+    border-color: var(--ink);
+  }
+
+  /* category swatch on recent rows / calendar */
+  .cat-dot {
+    display: inline-block;
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    margin-right: 8px;
+    vertical-align: 1px;
+  }
+  .cat-tag {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    color: var(--sage);
+    margin-top: 2px;
+  }
+
+  .note-block { margin-bottom: auto; }
+  .note-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 8px;
+  }
+  .note-input {
+    width: 100%;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 15px;
+    color: var(--ink-soft);
+    padding: 6px 0 12px;
+    border-bottom: 1px solid var(--line-soft);
+  }
+  .note-input::placeholder { color: var(--sage-soft); font-style: italic; }
+
+  .save-btn {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 18px;
+    text-align: center;
+    font-family: 'Work Sans', sans-serif;
+    font-size: 12px;
+    text-transform: uppercase;
+    letter-spacing: 0.22em;
+    font-weight: 500;
+    border-radius: 2px;
+    margin-top: 24px;
+    transition: opacity 0.2s, transform 0.15s;
+    width: 100%;
+  }
+  .save-btn:active { transform: scale(0.98); }
+  .save-btn:disabled { opacity: 0.3; }
+
+  /* ---------- SETTINGS SHEET ---------- */
+  .settings-sheet {
+    position: fixed; inset: 0;
+    background: var(--cream);
+    z-index: 100;
+    transform: translateY(100%);
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1);
+    overflow-y: auto;
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    visibility: hidden;
+  }
+  .settings-sheet.open { transform: translateY(0); visibility: visible; }
+
+  .settings-inner {
+    max-width: 480px;
+    margin: 0 auto;
+    padding: 28px 28px 60px;
+  }
+
+  .settings-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 30px;
+    color: var(--ink);
+    margin-bottom: 40px;
+  }
+
+  .field { margin-bottom: 28px; }
+  .field-label {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 8px;
+  }
+  .field-input {
+    width: 100%;
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 32px;
+    color: var(--ink);
+    padding: 4px 0 10px;
+    border-bottom: 1px solid var(--line);
+    letter-spacing: -0.01em;
+  }
+  .field-helper {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--sage);
+    margin-top: 8px;
+  }
+
+  .settings-actions { margin-top: 40px; display: flex; flex-direction: column; gap: 16px; }
+  .secondary-btn {
+    padding: 14px;
+    text-align: center;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--ink);
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    background: transparent;
+    width: 100%;
+  }
+  .secondary-btn:active { background: var(--cream-deep); }
+  .danger-btn {
+    color: var(--over);
+    border-color: rgba(160, 64, 32, 0.3);
+  }
+
+  /* ---------- TOAST ---------- */
+  .toast {
+    position: fixed;
+    left: 50%;
+    top: calc(20px + env(safe-area-inset-top));
+    transform: translateX(-50%) translateY(-200%);
+    opacity: 0;
+    pointer-events: none;
+    background: var(--ink);
+    color: var(--cream);
+    padding: 12px 20px;
+    border-radius: 100px;
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.15em;
+    transition: transform 0.4s cubic-bezier(0.32, 0.72, 0, 1), opacity 0.2s;
+    z-index: 200;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); opacity: 1; }
+
+  /* ---------- VIEW ANIMATION ---------- */
+  .view > * { animation: rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) backwards; }
+  .view > *:nth-child(1) { animation-delay: 0.02s; }
+  .view > *:nth-child(2) { animation-delay: 0.06s; }
+  .view > *:nth-child(3) { animation-delay: 0.10s; }
+  .view > *:nth-child(4) { animation-delay: 0.14s; }
+  .view > *:nth-child(5) { animation-delay: 0.18s; }
+  .view > *:nth-child(6) { animation-delay: 0.22s; }
+  .view > *:nth-child(7) { animation-delay: 0.26s; }
+  @keyframes rise {
+    from { opacity: 0; transform: translateY(8px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+
+  .gear-icon { width: 18px; height: 18px; display: block; }
+
+  button, .recent-row, .fab, .save-btn, .secondary-btn { touch-action: manipulation; }
+
+  /* ---------- CALENDAR (desktop) ---------- */
+  .cal-wrap { margin-bottom: 40px; }
+  .cal-head {
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 14px;
+  }
+  .cal-title {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-weight: 300;
+    font-size: 22px;
+    color: var(--ink);
+    letter-spacing: -0.01em;
+  }
+  .cal-nav { display: flex; gap: 4px; }
+  .cal-nav-btn {
+    width: 32px; height: 32px;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--sage);
+    font-family: 'Fraunces', serif;
+    font-size: 22px;
+    line-height: 1;
+    border-radius: 50%;
+    transition: background 0.15s, color 0.15s;
+  }
+  .cal-nav-btn:hover { color: var(--ink); background: var(--cream-deep); }
+  .cal-nav-btn:disabled { opacity: 0.3; pointer-events: none; }
+  .cal-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 6px;
+  }
+  .cal-dow {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--sage);
+    text-align: center;
+    padding-bottom: 8px;
+  }
+  .cal-cell {
+    aspect-ratio: 1;
+    border: 1px solid var(--line);
+    border-radius: 2px;
+    padding: 6px 8px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    background: transparent;
+    text-align: left;
+    transition: background 0.15s, border-color 0.15s;
+    min-height: 0;
+  }
+  .cal-cell:hover { border-color: var(--sage); background: rgba(216, 204, 170, 0.15); }
+  .cal-cell.empty { border: none; pointer-events: none; background: none; }
+  .cal-cell.empty:hover { background: none; border: none; }
+  .cal-cell.today { border-color: var(--ink); border-width: 2px; padding: 5px 7px; }
+  .cal-cell.has-entry { background: var(--cream-deep); border-color: var(--sage-soft); }
+  .cal-cell.over-day { background: rgba(160, 64, 32, 0.12); border-color: var(--over); }
+  .cal-cell.future { opacity: 0.35; pointer-events: none; }
+  .cal-num {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    color: var(--sage);
+    letter-spacing: 0.05em;
+  }
+  .cal-cell.today .cal-num { color: var(--ink); font-weight: 500; }
+  .cal-amt {
+    font-family: 'Fraunces', serif;
+    font-weight: 400;
+    font-size: 13px;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .cal-cell.over-day .cal-amt { color: var(--over); }
+
+  /* ---------- CATEGORY BREAKDOWN ---------- */
+  .cat-breakdown { margin-top: 32px; }
+  .cat-bd-title {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 0.18em;
+    color: var(--sage);
+    margin-bottom: 18px;
+  }
+  .cat-bd-body {
+    display: grid;
+    grid-template-columns: 160px 1fr;
+    gap: 28px;
+    align-items: center;
+  }
+  .cat-donut {
+    position: relative;
+    width: 160px; height: 160px;
+  }
+  .cat-donut svg { width: 100%; height: 100%; transform: rotate(-90deg); }
+  .cat-donut-center {
+    position: absolute; inset: 0;
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    pointer-events: none;
+    text-align: center;
+  }
+  .cat-donut-amt {
+    font-family: 'Fraunces', serif;
+    font-weight: 300;
+    font-size: 24px;
+    color: var(--ink);
+    line-height: 1;
+  }
+  .cat-donut-lbl {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 9px;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--sage);
+    margin-top: 6px;
+  }
+  .cat-legend { display: flex; flex-direction: column; gap: 8px; }
+  .cat-legend-row {
+    display: grid;
+    grid-template-columns: 1fr auto auto;
+    align-items: baseline;
+    gap: 12px;
+  }
+  .cat-legend-name {
+    font-family: 'Work Sans', sans-serif;
+    font-size: 13px;
+    color: var(--ink-soft);
+    display: flex; align-items: center;
+  }
+  .cat-legend-amt {
+    font-family: 'Fraunces', serif;
+    font-size: 14px;
+    color: var(--ink);
+  }
+  .cat-legend-pct {
+    font-family: 'JetBrains Mono', monospace;
+    font-size: 10px;
+    letter-spacing: 0.08em;
+    color: var(--sage);
+    min-width: 32px;
+    text-align: right;
+  }
+  .cat-bd-empty {
+    font-family: 'Fraunces', serif;
+    font-style: italic;
+    font-size: 13px;
+    color: var(--sage);
+    padding: 4px 0;
+  }
+
+  /* ---------- TABLET (≥720px) ---------- */
+  @media (min-width: 720px) {
+    .app { max-width: 640px; }
+    .view { padding: 48px 48px 140px; }
+    .date-line { font-size: 36px; }
+    .amount-big { font-size: 110px; }
+    .status-line { font-size: 19px; }
+    .fab { right: max(48px, calc((100vw - 640px) / 2 + 48px)); }
+  }
+
+  /* ---------- DESKTOP (≥960px) ---------- */
+  @media (min-width: 960px) {
+    .app {
+      max-width: 1120px;
+      padding: 32px 48px;
+    }
+    .view {
+      padding: 32px 0 80px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr);
+      grid-template-rows: auto auto auto auto auto auto 1fr;
+      column-gap: 80px;
+      row-gap: 0;
+      min-height: auto;
+    }
+    /* explicit placement so the right column starts at the top */
+    .view > .top         { grid-column: 1 / -1; grid-row: 1; margin-bottom: 48px; }
+    .view > .day-italic  { grid-column: 1; grid-row: 2; }
+    .view > .date-line   { grid-column: 1; grid-row: 3; }
+    .view > .hero-amount { grid-column: 1; grid-row: 4; }
+    .view > .status-line { grid-column: 1; grid-row: 5; }
+    .view > .progress-wrap { grid-column: 1; grid-row: 6; }
+    .view > .cal-wrap    { grid-column: 2; grid-row: 2 / span 4; align-self: start; }
+    .view > .recent-block{ grid-column: 2; grid-row: 6 / span 2; align-self: start; }
+
+    .date-line { font-size: 56px; margin-bottom: 56px; }
+    .amount-big { font-size: 128px; }
+    .status-line { font-size: 20px; margin-bottom: 48px; }
+    .progress-wrap { margin-bottom: 0; }
+
+    .desktop-only { display: block; }
+    .cal-wrap { display: block; margin-bottom: 40px; }
+
+    .recent-row { padding: 16px 0; }
+    .recent-amt { font-size: 20px; }
+
+    /* FAB sits at bottom-right of the viewport, not the column */
+    .fab { right: 48px; bottom: 48px; }
+
+    /* Sheets stay centered and constrained even on wide screens */
+    .sheet-inner { max-width: 560px; padding: 48px 48px 60px; }
+    .settings-inner { max-width: 560px; padding: 48px 48px 80px; }
+  }
+
+  /* ---------- WIDE DESKTOP (≥1280px) ---------- */
+  @media (min-width: 1280px) {
+    .app { max-width: 1240px; }
+    .view { column-gap: 120px; }
+    .amount-big { font-size: 144px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app" id="app">
+  <!-- ============= TODAY VIEW ============= -->
+  <div class="view" id="todayView">
+    <div class="top">
+      <span class="top-mark" id="monthLabel">— · 2026</span>
+      <button class="top-icon" id="settingsBtn" aria-label="Settings">
+        <svg class="gear-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
+          <circle cx="12" cy="12" r="3"/>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+        </svg>
+      </button>
+    </div>
+
+    <div class="day-italic" id="dayItalic">Tuesday</div>
+    <div class="date-line" id="dateLine">November 14</div>
+
+    <div class="hero-amount">
+      <div class="label-mono">Today</div>
+      <div class="amount-big" id="todayAmount"><sup>$</sup>0</div>
+    </div>
+
+    <div class="status-line" id="statusLine">—</div>
+
+    <div class="progress-wrap">
+      <div class="progress-track"><div class="progress-fill" id="progressFill" style="width: 0%"></div></div>
+      <div class="progress-meta">
+        <span id="progressLeft">$0 of $900</span>
+        <span id="progressRight">Day 1 of 30</span>
+      </div>
+    </div>
+
+    <div class="cal-wrap desktop-only">
+      <div class="cal-head">
+        <div class="cal-title" id="calTitle">This month</div>
+        <div class="cal-nav">
+          <button class="cal-nav-btn" id="calPrev" aria-label="Previous month">‹</button>
+          <button class="cal-nav-btn" id="calNext" aria-label="Next month">›</button>
+        </div>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+      <div class="cat-breakdown" id="catBreakdown"></div>
+    </div>
+
+    <div class="recent-block">
+      <div class="section-label">Recent</div>
+      <div id="recentList"></div>
+    </div>
+  </div>
+
+  <button class="fab" id="fabBtn" aria-label="Add today's expense">+</button>
+
+  <!-- ============= ENTRY SHEET ============= -->
+  <div class="sheet" id="entrySheet">
+    <div class="sheet-inner">
+      <div class="sheet-top">
+        <button class="sheet-cancel" id="cancelBtn">← Cancel</button>
+        <button class="sheet-delete hide" id="deleteBtn">Delete</button>
+      </div>
+
+      <div class="sheet-q" id="entryQ">Add an expense.</div>
+      <div class="sheet-sub" id="entrySub">Tuesday, Nov 14</div>
+
+      <div class="day-entries" id="dayEntries"></div>
+
+      <div class="input-row" id="inputRow">
+        <span class="input-currency">$</span>
+        <input
+          type="text"
+          inputmode="decimal"
+          class="input-amount"
+          id="amountInput"
+          placeholder="0"
+          maxlength="7"
+        />
+      </div>
+      <div class="input-hint">enter the day's total</div>
+
+      <div class="cat-block">
+        <div class="cat-label">Category</div>
+        <div class="cat-pills" id="catPills"></div>
+      </div>
+
+      <div class="note-block">
+        <div class="note-label">Note (optional)</div>
+        <input
+          type="text"
+          class="note-input"
+          id="noteInput"
+          placeholder="a brief remark…"
+          maxlength="80"
+        />
+      </div>
+
+      <button class="save-btn" id="saveBtn" disabled>Save</button>
+    </div>
+  </div>
+
+  <!-- ============= SETTINGS SHEET ============= -->
+  <div class="settings-sheet" id="settingsSheet">
+    <div class="settings-inner">
+      <div class="sheet-top">
+        <button class="sheet-cancel" id="settingsCloseBtn">← Done</button>
+      </div>
+
+      <div class="settings-title">Settings</div>
+
+      <div class="field">
+        <div class="field-label">Monthly budget</div>
+        <input type="text" inputmode="decimal" class="field-input" id="budgetInput" />
+        <div class="field-helper" id="dailyDerived">that's $30 a day</div>
+      </div>
+
+      <div class="field">
+        <div class="field-label">Days per month</div>
+        <input type="text" inputmode="numeric" class="field-input" id="daysInput" />
+        <div class="field-helper">used to calculate the daily allowance</div>
+      </div>
+
+      <div class="settings-actions">
+        <button class="secondary-btn" id="exportBtn">Export data</button>
+        <button class="secondary-btn" id="importBtn">Import data</button>
+        <input type="file" id="importFile" accept="application/json" style="display:none" />
+        <button class="secondary-btn danger-btn" id="resetBtn">Reset everything</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast">Saved</div>
+</div>
+
+<script>
+'use strict';
+
+const STORAGE_KEY = 'ledger.v1';
+
+const CATEGORIES = [
+  { id: 'groceries', label: 'Groceries', color: '#7a8c5c' },
+  { id: 'food',      label: 'Food',      color: '#b8783a' },
+  { id: 'gas',       label: 'Gas',       color: '#5d7a8c' },
+  { id: 'shopping',  label: 'Shopping',  color: '#a05a8c' },
+  { id: 'other',     label: 'Other',     color: '#8a7a5a' },
+];
+const CAT_BY_ID = Object.fromEntries(CATEGORIES.map(c => [c.id, c]));
+const DEFAULT_CAT = 'other';
+
+function defaultState() {
+  return {
+    monthlyBudget: 900,
+    daysInMonth: 30,
+    entries: {} // { 'YYYY-MM-DD': [{ id, amount, note, category, time }] }
+  };
+}
+
+function migrateEntries(raw) {
+  // accept legacy { date: {amount, note, category} } and convert to arrays
+  const out = {};
+  if (!raw) return out;
+  for (const [key, val] of Object.entries(raw)) {
+    if (Array.isArray(val)) {
+      out[key] = val.map(e => ({
+        id: e.id || newId(),
+        amount: Number(e.amount) || 0,
+        note: e.note || '',
+        category: e.category || DEFAULT_CAT,
+        time: e.time || ''
+      }));
+    } else if (val && typeof val === 'object' && 'amount' in val) {
+      out[key] = [{
+        id: newId(),
+        amount: Number(val.amount) || 0,
+        note: val.note || '',
+        category: val.category || DEFAULT_CAT,
+        time: ''
+      }];
+    }
+  }
+  return out;
+}
+
+function loadState() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (!raw) return defaultState();
+    const parsed = JSON.parse(raw);
+    return {
+      ...defaultState(),
+      ...parsed,
+      entries: migrateEntries(parsed.entries)
+    };
+  } catch (e) {
+    return defaultState();
+  }
+}
+
+function newId() {
+  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+}
+
+function saveState(s) {
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(s)); }
+  catch (e) { showToast('Save failed'); }
+}
+
+let state = loadState();
+
+// ---------- DATE HELPERS ----------
+function todayKey() {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+}
+function parseKey(k) {
+  const [y,m,d] = k.split('-').map(Number);
+  return new Date(y, m-1, d);
+}
+
+const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+const DAY_SHORT = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
+const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+const MONTH_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+function dayEntries(key) {
+  const arr = state.entries[key];
+  return Array.isArray(arr) ? arr : [];
+}
+function dayTotal(key) {
+  return dayEntries(key).reduce((s, e) => s + (e.amount || 0), 0);
+}
+function monthEntries(year, month) {
+  const out = [];
+  for (const [key, arr] of Object.entries(state.entries)) {
+    const d = parseKey(key);
+    if (d.getFullYear() !== year || d.getMonth() !== month) continue;
+    for (const e of arr) out.push(e);
+  }
+  return out;
+}
+function thisMonthTotal() {
+  const now = new Date();
+  return monthEntries(now.getFullYear(), now.getMonth())
+    .reduce((s, e) => s + (e.amount || 0), 0);
+}
+function dominantCategory(entries) {
+  if (!entries || entries.length === 0) return null;
+  const totals = {};
+  for (const e of entries) {
+    const id = CAT_BY_ID[e.category] ? e.category : DEFAULT_CAT;
+    totals[id] = (totals[id] || 0) + (e.amount || 0);
+  }
+  let best = null, bestAmt = -1;
+  for (const [id, amt] of Object.entries(totals)) {
+    if (amt > bestAmt) { best = id; bestAmt = amt; }
+  }
+  return best;
+}
+
+function fmtMoney(n) { return Math.round(n).toLocaleString('en-US'); }
+function fmtMoneyDecimal(n) {
+  if (n % 1 === 0) return fmtMoney(n);
+  return n.toFixed(2);
+}
+
+// ---------- RENDER ----------
+function renderToday() {
+  const now = new Date();
+  const dayN = now.getDate();
+  document.getElementById('monthLabel').textContent = `${MONTH_SHORT[now.getMonth()]} · ${now.getFullYear()}`;
+  document.getElementById('dayItalic').textContent = DAY_NAMES[now.getDay()];
+  document.getElementById('dateLine').textContent = `${MONTH_NAMES[now.getMonth()]} ${dayN}`;
+
+  const todayHasEntries = dayEntries(todayKey()).length > 0;
+  const todayAmt = dayTotal(todayKey());
+  const todayEl = document.getElementById('todayAmount');
+  todayEl.innerHTML = `<sup>$</sup>${fmtMoneyDecimal(todayAmt)}`;
+  todayEl.classList.toggle('dim', !todayHasEntries);
+
+  const dailyAllowance = state.monthlyBudget / state.daysInMonth;
+  const dayN_capped = Math.min(dayN, state.daysInMonth);
+  const expectedSoFar = dailyAllowance * dayN_capped;
+  const actualSoFar = thisMonthTotal();
+  const diff = expectedSoFar - actualSoFar;
+
+  const statusEl = document.getElementById('statusLine');
+  if (!todayHasEntries) {
+    if (diff >= 0) statusEl.textContent = `You have $${fmtMoney(diff)} left in this month's pace.`;
+    else statusEl.textContent = `You're $${fmtMoney(-diff)} over pace this month.`;
+    statusEl.classList.toggle('over', diff < 0);
+  } else {
+    const todayLeft = dailyAllowance - todayAmt;
+    if (todayLeft >= 0 && diff >= 0) {
+      statusEl.textContent = `You have $${fmtMoney(todayLeft)} left in today's allowance.`;
+      statusEl.classList.remove('over');
+    } else if (todayLeft < 0 && diff >= 0) {
+      statusEl.textContent = `Over by $${fmtMoney(-todayLeft)} today, but still on pace overall.`;
+      statusEl.classList.remove('over');
+    } else {
+      statusEl.textContent = `You're $${fmtMoney(-diff)} over pace this month.`;
+      statusEl.classList.add('over');
+    }
+  }
+
+  const pct = Math.min(100, Math.max(0, (actualSoFar / state.monthlyBudget) * 100));
+  const fill = document.getElementById('progressFill');
+  fill.style.width = pct + '%';
+  fill.classList.toggle('over', actualSoFar > expectedSoFar);
+
+  document.getElementById('progressLeft').textContent = `$${fmtMoney(actualSoFar)} of $${fmtMoney(state.monthlyBudget)}`;
+  document.getElementById('progressRight').textContent = `Day ${dayN_capped} of ${state.daysInMonth}`;
+
+  renderRecent();
+  renderCalendar();
+}
+
+let viewYear = new Date().getFullYear();
+let viewMonth = new Date().getMonth();
+
+function renderCalendar() {
+  const grid = document.getElementById('calGrid');
+  if (!grid) return;
+  grid.innerHTML = '';
+
+  const now = new Date();
+  const year = viewYear;
+  const month = viewMonth;
+  const todayN = now.getDate();
+  const dailyAllowance = state.monthlyBudget / state.daysInMonth;
+  const daysInRealMonth = new Date(year, month + 1, 0).getDate();
+  const firstDow = new Date(year, month, 1).getDay();
+
+  // header
+  const title = document.getElementById('calTitle');
+  if (title) {
+    const isCurrent = (year === now.getFullYear() && month === now.getMonth());
+    title.textContent = isCurrent ? 'This month' : `${MONTH_NAMES[month]} ${year}`;
+  }
+  const nextBtn = document.getElementById('calNext');
+  if (nextBtn) {
+    // disable next if we're already at or past the current month
+    const atCurrent = (year > now.getFullYear()) ||
+                      (year === now.getFullYear() && month >= now.getMonth());
+    nextBtn.disabled = atCurrent;
+  }
+
+  for (const label of ['S','M','T','W','T','F','S']) {
+    const dow = document.createElement('div');
+    dow.className = 'cal-dow';
+    dow.textContent = label;
+    grid.appendChild(dow);
+  }
+
+  for (let i = 0; i < firstDow; i++) {
+    const empty = document.createElement('div');
+    empty.className = 'cal-cell empty';
+    grid.appendChild(empty);
+  }
+
+  for (let day = 1; day <= daysInRealMonth; day++) {
+    const key = `${year}-${String(month+1).padStart(2,'0')}-${String(day).padStart(2,'0')}`;
+    const entries = dayEntries(key);
+    const total = dayTotal(key);
+    const cell = document.createElement('button');
+    cell.className = 'cal-cell';
+    const isToday = (year === now.getFullYear() && month === now.getMonth() && day === todayN);
+    if (isToday) cell.classList.add('today');
+    const isFuture = (year > now.getFullYear()) ||
+                     (year === now.getFullYear() && month > now.getMonth()) ||
+                     (year === now.getFullYear() && month === now.getMonth() && day > todayN);
+    if (isFuture) cell.classList.add('future');
+    if (entries.length > 0) {
+      cell.classList.add('has-entry');
+      if (total > dailyAllowance) cell.classList.add('over-day');
+    }
+    const dominant = dominantCategory(entries);
+    const cat = dominant ? CAT_BY_ID[dominant] : null;
+    cell.innerHTML = `
+      <span class="cal-num">
+        ${cat ? `<span class="cat-dot" style="background:${cat.color}"></span>` : ''}${day}
+      </span>
+      ${entries.length > 0 ? `<span class="cal-amt">$${fmtMoneyDecimal(total)}</span>` : ''}
+    `;
+    if (!isFuture) cell.addEventListener('click', () => openEntry(key));
+    grid.appendChild(cell);
+  }
+
+  renderCategoryBreakdown(year, month);
+}
+
+function renderCategoryBreakdown(year, month) {
+  const wrap = document.getElementById('catBreakdown');
+  if (!wrap) return;
+
+  const totals = {};
+  for (const c of CATEGORIES) totals[c.id] = 0;
+  let grandTotal = 0;
+  for (const e of monthEntries(year, month)) {
+    const id = CAT_BY_ID[e.category] ? e.category : DEFAULT_CAT;
+    totals[id] += e.amount;
+    grandTotal += e.amount;
+  }
+
+  if (grandTotal === 0) {
+    wrap.innerHTML = `
+      <div class="cat-bd-title">By category</div>
+      <div class="cat-bd-empty">No spend recorded this month.</div>
+    `;
+    return;
+  }
+
+  // donut math
+  const r = 56;
+  const cx = 80, cy = 80;
+  const circumference = 2 * Math.PI * r;
+  let offset = 0;
+  let arcs = '';
+  const visibleCats = CATEGORIES.filter(c => totals[c.id] > 0);
+  for (const c of visibleCats) {
+    const amt = totals[c.id];
+    const fraction = amt / grandTotal;
+    const arcLen = fraction * circumference;
+    arcs += `
+      <circle cx="${cx}" cy="${cy}" r="${r}"
+        fill="none" stroke="${c.color}" stroke-width="18"
+        stroke-dasharray="${arcLen} ${circumference - arcLen}"
+        stroke-dashoffset="${-offset}" />
+    `;
+    offset += arcLen;
+  }
+
+  let legend = '';
+  for (const c of visibleCats) {
+    const amt = totals[c.id];
+    const pct = Math.round((amt / grandTotal) * 100);
+    legend += `
+      <div class="cat-legend-row">
+        <span class="cat-legend-name"><span class="cat-dot" style="background:${c.color}"></span>${c.label}</span>
+        <span class="cat-legend-amt">$${fmtMoney(amt)}</span>
+        <span class="cat-legend-pct">${pct}%</span>
+      </div>
+    `;
+  }
+
+  wrap.innerHTML = `
+    <div class="cat-bd-title">By category</div>
+    <div class="cat-bd-body">
+      <div class="cat-donut">
+        <svg viewBox="0 0 160 160">${arcs}</svg>
+        <div class="cat-donut-center">
+          <div class="cat-donut-amt">$${fmtMoney(grandTotal)}</div>
+          <div class="cat-donut-lbl">Total</div>
+        </div>
+      </div>
+      <div class="cat-legend">${legend}</div>
+    </div>
+  `;
+}
+
+function renderRecent() {
+  const list = document.getElementById('recentList');
+  list.innerHTML = '';
+  const now = new Date();
+  const rows = [];
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(now);
+    d.setDate(now.getDate() - i);
+    const key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+    for (const e of dayEntries(key)) {
+      rows.push({ key, date: d, entry: e });
+    }
+  }
+  if (rows.length === 0) {
+    list.innerHTML = `<div class="empty-state">No entries yet. Tap + to log an expense.</div>`;
+    return;
+  }
+  for (const r of rows.slice(0, 10)) {
+    const cat = CAT_BY_ID[r.entry.category] || CAT_BY_ID[DEFAULT_CAT];
+    const row = document.createElement('button');
+    row.className = 'recent-row';
+    row.innerHTML = `
+      <span>
+        <span class="recent-day"><span class="cat-dot" style="background:${cat.color}"></span>${DAY_SHORT[r.date.getDay()]} ${r.date.getDate()}</span>
+        <div class="cat-tag">${cat.label}${r.entry.note ? ' · ' + escapeHtml(r.entry.note) : ''}</div>
+      </span>
+      <span class="recent-amt">$${fmtMoneyDecimal(r.entry.amount)}</span>
+    `;
+    row.addEventListener('click', () => openEntry(r.key, r.entry.id));
+    list.appendChild(row);
+  }
+}
+
+function escapeHtml(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---------- ENTRY SHEET ----------
+let editingKey = null;
+let editingId = null; // null = adding new entry; otherwise editing existing entry id
+let selectedCat = DEFAULT_CAT;
+
+function renderCatPills() {
+  const wrap = document.getElementById('catPills');
+  wrap.innerHTML = '';
+  for (const c of CATEGORIES) {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'cat-pill' + (c.id === selectedCat ? ' selected' : '');
+    b.textContent = c.label;
+    b.addEventListener('click', () => {
+      selectedCat = (selectedCat === c.id && c.id !== DEFAULT_CAT) ? DEFAULT_CAT : c.id;
+      renderCatPills();
+    });
+    wrap.appendChild(b);
+  }
+}
+
+function renderDayEntries() {
+  const wrap = document.getElementById('dayEntries');
+  wrap.innerHTML = '';
+  if (!editingKey) return;
+  const entries = dayEntries(editingKey);
+  if (entries.length === 0) return;
+
+  const total = dayTotal(editingKey);
+  let html = `<div class="day-entries-label">Entries · $${fmtMoneyDecimal(total)} total</div>`;
+  wrap.innerHTML = html;
+
+  for (const e of entries) {
+    const cat = CAT_BY_ID[e.category] || CAT_BY_ID[DEFAULT_CAT];
+    const row = document.createElement('button');
+    row.type = 'button';
+    row.className = 'day-entry-row' + (e.id === editingId ? ' editing' : '');
+    row.innerHTML = `
+      <span class="day-entry-meta">
+        <span class="day-entry-cat"><span class="cat-dot" style="background:${cat.color}"></span>${cat.label}</span>
+        ${e.note ? `<span class="day-entry-note">${escapeHtml(e.note)}</span>` : ''}
+      </span>
+      <span class="day-entry-amt">$${fmtMoneyDecimal(e.amount)}</span>
+    `;
+    row.addEventListener('click', () => beginEdit(e.id));
+    wrap.appendChild(row);
+  }
+}
+
+function setFormForAdd() {
+  editingId = null;
+  document.getElementById('amountInput').value = '';
+  document.getElementById('noteInput').value = '';
+  selectedCat = DEFAULT_CAT;
+  renderCatPills();
+  document.getElementById('deleteBtn').classList.add('hide');
+  document.getElementById('saveBtn').textContent = 'Add';
+  updateEntryQ();
+  updateSaveBtn();
+}
+
+function setFormForEdit(entry) {
+  editingId = entry.id;
+  document.getElementById('amountInput').value = String(entry.amount);
+  document.getElementById('noteInput').value = entry.note || '';
+  selectedCat = CAT_BY_ID[entry.category] ? entry.category : DEFAULT_CAT;
+  renderCatPills();
+  document.getElementById('deleteBtn').classList.remove('hide');
+  document.getElementById('saveBtn').textContent = 'Save';
+  updateEntryQ();
+  updateSaveBtn();
+}
+
+function updateEntryQ() {
+  const q = document.getElementById('entryQ');
+  if (editingId) {
+    q.textContent = 'Edit this entry.';
+  } else {
+    const isToday = editingKey === todayKey();
+    q.textContent = isToday ? 'Add an expense.' : 'Add an expense.';
+  }
+}
+
+function beginEdit(entryId) {
+  const entries = dayEntries(editingKey);
+  const e = entries.find(x => x.id === entryId);
+  if (!e) return;
+  setFormForEdit(e);
+  renderDayEntries();
+  document.getElementById('amountInput').focus();
+}
+
+function openEntry(key, entryId) {
+  editingKey = key || todayKey();
+  const d = parseKey(editingKey);
+
+  document.getElementById('entrySub').textContent = `${DAY_NAMES[d.getDay()]}, ${MONTH_SHORT[d.getMonth()]} ${d.getDate()}`;
+
+  if (entryId) {
+    const e = dayEntries(editingKey).find(x => x.id === entryId);
+    if (e) setFormForEdit(e); else setFormForAdd();
+  } else {
+    setFormForAdd();
+  }
+
+  renderDayEntries();
+  document.getElementById('entrySheet').classList.add('open');
+  setTimeout(() => document.getElementById('amountInput').focus(), 380);
+}
+
+function closeEntry() {
+  document.getElementById('entrySheet').classList.remove('open');
+  document.getElementById('amountInput').blur();
+  document.getElementById('noteInput').blur();
+  editingKey = null;
+  editingId = null;
+}
+
+function updateSaveBtn() {
+  const v = document.getElementById('amountInput').value.trim();
+  const num = parseFloat(v);
+  document.getElementById('saveBtn').disabled = !(v && !isNaN(num) && num >= 0);
+}
+
+function saveEntry() {
+  const v = document.getElementById('amountInput').value.trim();
+  const note = document.getElementById('noteInput').value.trim();
+  const num = parseFloat(v);
+  if (isNaN(num) || num < 0 || !editingKey) return;
+
+  const amount = Math.round(num * 100) / 100;
+  const category = CAT_BY_ID[selectedCat] ? selectedCat : DEFAULT_CAT;
+  if (!state.entries[editingKey]) state.entries[editingKey] = [];
+
+  if (editingId) {
+    const arr = state.entries[editingKey];
+    const idx = arr.findIndex(e => e.id === editingId);
+    if (idx >= 0) arr[idx] = { ...arr[idx], amount, note, category };
+  } else {
+    state.entries[editingKey].push({
+      id: newId(),
+      amount,
+      note,
+      category,
+      time: new Date().toISOString()
+    });
+  }
+
+  saveState(state);
+  renderToday();
+  setFormForAdd();
+  renderDayEntries();
+  showToast(editingId ? 'Saved' : 'Added');
+  document.getElementById('amountInput').focus();
+}
+
+function deleteEntry() {
+  if (!editingKey || !editingId) return;
+  if (!confirm('Delete this entry?')) return;
+  const arr = state.entries[editingKey];
+  const idx = arr.findIndex(e => e.id === editingId);
+  if (idx >= 0) arr.splice(idx, 1);
+  if (arr.length === 0) delete state.entries[editingKey];
+  saveState(state);
+  renderToday();
+  setFormForAdd();
+  renderDayEntries();
+  showToast('Deleted');
+}
+
+// ---------- SETTINGS ----------
+function openSettings() {
+  document.getElementById('budgetInput').value = state.monthlyBudget;
+  document.getElementById('daysInput').value = state.daysInMonth;
+  updateDailyDerived();
+  document.getElementById('settingsSheet').classList.add('open');
+}
+
+function closeSettings() {
+  const b = parseFloat(document.getElementById('budgetInput').value);
+  const d = parseInt(document.getElementById('daysInput').value, 10);
+  if (!isNaN(b) && b > 0) state.monthlyBudget = b;
+  if (!isNaN(d) && d > 0 && d <= 31) state.daysInMonth = d;
+  saveState(state);
+  document.getElementById('settingsSheet').classList.remove('open');
+  renderToday();
+}
+
+function updateDailyDerived() {
+  const b = parseFloat(document.getElementById('budgetInput').value);
+  const d = parseInt(document.getElementById('daysInput').value, 10);
+  if (!isNaN(b) && !isNaN(d) && d > 0) {
+    const daily = b / d;
+    document.getElementById('dailyDerived').textContent = `that's $${fmtMoneyDecimal(Math.round(daily*100)/100)} a day`;
+  }
+}
+
+function exportData() {
+  const data = JSON.stringify(state, null, 2);
+  const blob = new Blob([data], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `ledger-backup-${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('Exported');
+}
+
+function importData(file) {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const parsed = JSON.parse(e.target.result);
+      if (typeof parsed.monthlyBudget === 'number' && parsed.entries) {
+        if (!confirm('Replace all current data with imported data?')) return;
+        state = { ...defaultState(), ...parsed };
+        saveState(state);
+        renderToday();
+        document.getElementById('budgetInput').value = state.monthlyBudget;
+        document.getElementById('daysInput').value = state.daysInMonth;
+        showToast('Imported');
+      } else {
+        showToast('Invalid file');
+      }
+    } catch (err) { showToast('Import failed'); }
+  };
+  reader.readAsText(file);
+}
+
+function resetAll() {
+  if (!confirm('Erase all entries and reset settings? This cannot be undone.')) return;
+  state = defaultState();
+  saveState(state);
+  document.getElementById('budgetInput').value = state.monthlyBudget;
+  document.getElementById('daysInput').value = state.daysInMonth;
+  updateDailyDerived();
+  renderToday();
+  showToast('Reset');
+}
+
+let toastTimer = null;
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove('show'), 1800);
+}
+
+// ---------- WIRE UP ----------
+document.getElementById('fabBtn').addEventListener('click', () => openEntry(todayKey()));
+document.getElementById('cancelBtn').addEventListener('click', closeEntry);
+document.getElementById('saveBtn').addEventListener('click', saveEntry);
+document.getElementById('deleteBtn').addEventListener('click', deleteEntry);
+document.getElementById('inputRow').addEventListener('click', () => document.getElementById('amountInput').focus());
+
+document.getElementById('amountInput').addEventListener('input', (e) => {
+  let v = e.target.value.replace(/[^\d.]/g, '');
+  const parts = v.split('.');
+  if (parts.length > 2) v = parts[0] + '.' + parts.slice(1).join('');
+  if (parts.length === 2 && parts[1].length > 2) v = parts[0] + '.' + parts[1].slice(0, 2);
+  e.target.value = v;
+  updateSaveBtn();
+});
+
+document.getElementById('amountInput').addEventListener('keydown', (e) => {
+  if (e.key === 'Enter' && !document.getElementById('saveBtn').disabled) {
+    e.preventDefault();
+    saveEntry();
+  }
+});
+
+document.getElementById('settingsBtn').addEventListener('click', openSettings);
+document.getElementById('settingsCloseBtn').addEventListener('click', closeSettings);
+document.getElementById('budgetInput').addEventListener('input', updateDailyDerived);
+document.getElementById('daysInput').addEventListener('input', updateDailyDerived);
+
+document.getElementById('exportBtn').addEventListener('click', exportData);
+document.getElementById('importBtn').addEventListener('click', () => document.getElementById('importFile').click());
+document.getElementById('importFile').addEventListener('change', (e) => {
+  if (e.target.files[0]) importData(e.target.files[0]);
+  e.target.value = '';
+});
+document.getElementById('resetBtn').addEventListener('click', resetAll);
+
+document.addEventListener('visibilitychange', () => { if (!document.hidden) renderToday(); });
+
+const calPrev = document.getElementById('calPrev');
+const calNext = document.getElementById('calNext');
+if (calPrev) calPrev.addEventListener('click', () => {
+  if (viewMonth === 0) { viewMonth = 11; viewYear--; } else { viewMonth--; }
+  renderCalendar();
+});
+if (calNext) calNext.addEventListener('click', () => {
+  const now = new Date();
+  if (viewYear > now.getFullYear() ||
+      (viewYear === now.getFullYear() && viewMonth >= now.getMonth())) return;
+  if (viewMonth === 11) { viewMonth = 0; viewYear++; } else { viewMonth++; }
+  renderCalendar();
+});
+
+renderToday();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  });
+}
+</script>
+
+</body>
+</html>
