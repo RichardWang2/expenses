@@ -1276,15 +1276,23 @@
       }
     }
     const closedCount = closedSet.size;
-    const dailyBudgetBase = state.monthlyBudget / dim_;
-    const effectiveMonthlyBudget = state.monthlyBudget - dailyBudgetBase * closedCount;
-    const openDayCount = Math.max(1, dim_ - closedCount);
-    const dailyBudget = effectiveMonthlyBudget / openDayCount;
+    // Daily budget is fixed at monthlyBudget / daysInMonth — closures don't change it.
+    const dailyBudget = state.monthlyBudget / dim_;
+    // Each closed day acts as a phantom expense of one daily budget.
+    const closedSpend = dailyBudget * closedCount;
     const dayClosed = closedSet.has(D);
-    const remaining = dailyBudget - daySpent;
-    const overToday = remaining < 0 && !dayClosed;
+    const remaining = dayClosed ? 0 : (dailyBudget - daySpent);
+    const overToday = !dayClosed && remaining < 0;
 
-    const monthSpent = state.expenses.reduce((a, b) => a + b.amount, 0);
+    // Effective monthSpent: closed days contribute the daily budget as phantom
+    // spend; their actual logged expenses are overridden, never double-counted.
+    let openSpent = 0;
+    for (const e of state.expenses) {
+      if (closedSet.has(e.day)) continue;
+      openSpent += e.amount;
+    }
+    const monthSpent = openSpent + closedSpend;
+
     const isCurrentMonth = state.year === TODAY.year && state.month === TODAY.month;
     const dayForPace = isCurrentMonth ? TODAY.day : dim_;
     const expectedByNow = dailyBudget * dayForPace;
@@ -1292,6 +1300,7 @@
 
     const byCatMonth = {};
     for (const e of state.expenses) {
+      if (closedSet.has(e.day)) continue;
       byCatMonth[e.cat] = byCatMonth[e.cat] || { amount: 0, count: 0 };
       byCatMonth[e.cat].amount += e.amount;
       byCatMonth[e.cat].count += 1;
@@ -1303,10 +1312,10 @@
 
     return {
       catByKey, byDay, dim: dim_,
-      dayExp, daySpent, dailyBudget, dailyBudgetBase, remaining, overToday, dayClosed,
+      dayExp, daySpent, dailyBudget, remaining, overToday, dayClosed,
       monthSpent, pace, isCurrentMonth, dayForPace,
       catList,
-      closedSet, closedCount, openDayCount, effectiveMonthlyBudget,
+      closedSet, closedCount, closedSpend,
       isToday: state.selectedDay === TODAY.day && isCurrentMonth,
     };
   }
@@ -1541,8 +1550,7 @@
   }
 
   function renderMonthHero(d) {
-    const effBudget = Math.round(d.effectiveMonthlyBudget);
-    const remaining = d.effectiveMonthlyBudget - d.monthSpent;
+    const remaining = state.monthlyBudget - d.monthSpent;
     const isOver = remaining < 0;
     let paceVal, paceClass = 'muted', paceSub;
     if (Math.abs(d.pace) < 10) { paceVal = 'On track'; paceSub = 'Pacing well'; }
@@ -1550,7 +1558,7 @@
     else { paceVal = '−$' + Math.round(-d.pace); paceClass = 'under'; paceSub = 'Under pace'; }
 
     const budgetSub = d.closedCount > 0
-      ? 'of $' + effBudget + ' · ' + d.closedCount + ' closed'
+      ? 'of $' + state.monthlyBudget + ' · ' + d.closedCount + ' closed'
       : 'of $' + state.monthlyBudget;
 
     return h('section', {},
@@ -1584,11 +1592,14 @@
     const days = d.dim;
     const dailyBudget = state.monthlyBudget / days;
 
-    // cumulative spend up to each day (1..days)
+    // cumulative spend up to each day (1..days). Closed days contribute the
+    // daily budget as a phantom amount, matching monthSpent semantics.
     const cumActual = [];
     for (let day = 1; day <= days; day++) {
       const prev = cumActual[cumActual.length - 1] || 0;
-      const dayTotal = (d.byDay[day] || []).reduce((a,b) => a + b.amount, 0);
+      const dayTotal = d.closedSet.has(day)
+        ? dailyBudget
+        : (d.byDay[day] || []).reduce((a,b) => a + b.amount, 0);
       cumActual.push(prev + dayTotal);
     }
     const cumBudget = [];
@@ -1729,7 +1740,9 @@
     const animStyle = { animationDelay: (Math.min(idx, 35) * 12) + 'ms' };
 
     const cellChildren = [h('div', { class: 'cell-num' }, String(day))];
-    if (total > 0) {
+    if (isClosed) {
+      cellChildren.push(h('div', { class: 'cell-amt' }, '$' + Math.round(d.dailyBudget)));
+    } else if (total > 0) {
       cellChildren.push(h('div', { class: 'cell-amt' }, '$' + Math.round(total)));
     }
     return h('div', { class: cls.join(' '), style: animStyle },
