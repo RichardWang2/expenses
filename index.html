@@ -1293,9 +1293,25 @@
     const monthSpent = openSpent + closedSpend;
 
     const isCurrentMonth = state.year === TODAY.year && state.month === TODAY.month;
+    // "Past" = days strictly before today. Today is in-progress, so neither
+    // its spending nor its budget allocation count toward pace yet. For past
+    // months, "past" covers the entire month.
+    const pastCutoff = isCurrentMonth ? TODAY.day : dim_ + 1;
+    const pacePastDays = isCurrentMonth ? Math.max(0, TODAY.day - 1) : dim_;
+    let pastOpenSpent = 0;
+    for (const e of state.expenses) {
+      if (closedSet.has(e.day)) continue;
+      if (e.day >= pastCutoff) continue;
+      pastOpenSpent += e.amount;
+    }
+    let pastClosedCount = 0;
+    for (const day of closedSet) {
+      if (day < pastCutoff) pastClosedCount++;
+    }
+    const pastMonthSpent = pastOpenSpent + dailyBudget * pastClosedCount;
+    const pace = pastMonthSpent - dailyBudget * pacePastDays;
+    // dayForPace kept for downstream renderers that still need a "days elapsed" figure.
     const dayForPace = isCurrentMonth ? TODAY.day : dim_;
-    const expectedByNow = dailyBudget * dayForPace;
-    const pace = monthSpent - expectedByNow;
 
     const byCatMonth = {};
     for (const e of state.expenses) {
@@ -1325,7 +1341,7 @@
     return {
       catByKey, byDay, dim: dim_,
       dayExp, daySpent, dailyBudget, remaining, overToday, dayClosed,
-      monthSpent, pace, isCurrentMonth, dayForPace,
+      monthSpent, pace, pacePastDays, pastMonthSpent, isCurrentMonth, dayForPace,
       catList,
       closedSet, closedCount, closedSpend,
       sparkSeries,
@@ -1622,8 +1638,10 @@
     const cumBudget = [];
     for (let day = 1; day <= days; day++) cumBudget.push(dailyBudget * day);
 
-    // for current month, only draw actual line up to today
-    const drawUntil = d.isCurrentMonth ? Math.min(TODAY.day, days) : days;
+    // Align with the pace metric: today is in-progress, so the actual line
+    // only runs through completed days (today − 1 for current month, the
+    // full month for past months).
+    const drawUntil = d.pacePastDays;
 
     // chart scales
     const yMax = Math.max(state.monthlyBudget, cumActual[drawUntil - 1] || 0) * 1.05;
@@ -1652,18 +1670,19 @@
     }
 
     const lastActualPt = actualPts[actualPts.length - 1];
-    const todaySpent = cumActual[drawUntil - 1] || 0;
-    const todayBudget = cumBudget[drawUntil - 1] || 0;
-    const diff = todaySpent - todayBudget;
+    const diff = d.pace;
 
     let summary;
-    if (Math.abs(diff) < 5) {
+    if (drawUntil === 0) {
+      summary = h('span', {}, 'Day 1 of ', h('span', { class: 'num' }, days),
+        ' — pace begins after today closes.');
+    } else if (Math.abs(diff) < 5) {
       summary = h('span', {}, 'Tracking right at budget through ',
         h('span', { class: 'num' }, 'day ' + drawUntil), '.');
     } else if (diff > 0) {
       summary = h('span', {}, 'Through day ' + drawUntil + ', you\'re ',
         h('span', { class: 'num over' }, '$' + Math.round(diff)),
-        ' ahead of budget.');
+        ' over budget.');
     } else {
       summary = h('span', {}, 'Through day ' + drawUntil + ', you\'re ',
         h('span', { class: 'num under' }, '$' + Math.round(-diff)),
