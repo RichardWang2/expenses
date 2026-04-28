@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'ledger-v1';
+const CACHE_VERSION = 'lumen-v2';
 const APP_SHELL = [
   './',
   './index.html',

@@ -1,13 +1,13 @@
 {
-  "name": "Ledger",
-  "short_name": "Ledger",
-  "description": "A quiet daily expense tracker.",
+  "name": "Lumen",
+  "short_name": "Lumen",
+  "description": "A quiet monthly expense tracker.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "orientation": "portrait",
-  "background_color": "#f4ede0",
-  "theme_color": "#f4ede0",
+  "orientation": "any",
+  "background_color": "#f5efe4",
+  "theme_color": "#f5efe4",
   "icons": [
     {
       "src": "icon-192.png",

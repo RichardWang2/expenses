@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Lumen — Expenses</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;0,600;1,300;1,400;1,500&family=EB+Garamond:ital,wght@0,400;0,500;0,600;1,400;1,500&family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=Inter:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@300;400;500;600&display=swap" rel="stylesheet" />
+<style>
+  html, body { margin: 0; padding: 0; height: 100%; }
+  body { background: #2a2620; font-family: 'Inter', system-ui, sans-serif; }
+  * { box-sizing: border-box; }
+  button { font-family: inherit; }
+
+  .palette-warm  { --bg: #f5efe4; --bg-soft: #ede5d4; --ink: #1c1812; --ink-soft: #8b7f6e; --rule: #e3d9c5; }
+  .palette-bone  { --bg: #f4f1ea; --bg-soft: #ebe6da; --ink: #2a261f; --ink-soft: #8c8576; --rule: #ddd5c3; }
+  .palette-slate { --bg: #ecedee; --bg-soft: #e0e2e4; --ink: #1d2127; --ink-soft: #7a808a; --rule: #cdd1d6; }
+  .palette-night { --bg: #1d1a14; --bg-soft: #25221b; --ink: #ece5d4; --ink-soft: #8b8170; --rule: #3a352a; }
+
+  .type-cormorant { --font-display: 'Cormorant Garamond', 'Cormorant', serif; --font-sans: 'Inter', sans-serif; --font-mono: 'JetBrains Mono', ui-monospace, monospace; }
+  .type-fraunces  { --font-display: 'Fraunces', serif; --font-sans: 'Inter', sans-serif; --font-mono: 'JetBrains Mono', monospace; }
+  .type-eb        { --font-display: 'EB Garamond', serif; --font-sans: 'IBM Plex Sans', sans-serif; --font-mono: 'IBM Plex Mono', monospace; }
+
+  @keyframes fadeIn      { from { opacity: 0; }                       to { opacity: 1; } }
+  @keyframes sheetUp     { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideInRight{ from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes pulseDot    { 0%, 100% { opacity: 1; transform: scale(1); }
+                           50%      { opacity: 0.4; transform: scale(0.7); } }
+  @keyframes pulseRing   { 0% { box-shadow: 0 0 0 0 rgba(155,60,60,0.45); }
+                          100% { box-shadow: 0 0 0 8px rgba(155,60,60,0); } }
+  @keyframes ghostIn     { 0% { opacity: 0; transform: translateY(-6px); background: rgba(0,0,0,0.06); }
+                           60% { opacity: 1; transform: translateY(0); background: rgba(0,0,0,0.06); }
+                           100% { opacity: 1; transform: translateY(0); background: transparent; } }
+</style>
+</head>
+<body>
+
+<div id="root"></div>
+
+<script src="https://unpkg.com/react@18.3.1/umd/react.development.js" integrity="sha384-hD6/rw4ppMLGNu3tX5cjIb+uRZ7UkRJ6BPkLpg4hAu/6onKUg4lLsHAs9EBPT82L" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/react-dom@18.3.1/umd/react-dom.development.js" integrity="sha384-u6aeetuaXnQ38mYT8rp6sbXaQe3NL9t+IBXmnYxwkUI2Hw4bsp2Wvmx4yRQF1uAm" crossorigin="anonymous"></script>
+<script src="https://unpkg.com/@babel/standalone@7.29.0/babel.min.js" integrity="sha384-m08KidiNqLdpJqLq95G/LEi8Qvjl/xUYll3QILypMoQ65QorJ9Lvtp2RXYGBFj1y" crossorigin="anonymous"></script>
+
+<script type="text/babel" src="design-canvas.jsx"></script>
+<script type="text/babel" src="tweaks-panel.jsx"></script>
+<script type="text/babel" src="data.jsx"></script>
+<script type="text/babel" src="store.jsx"></script>
+<script type="text/babel" src="primitives.jsx"></script>
+<script type="text/babel" src="add-modes.jsx"></script>
+<script type="text/babel" src="dashboard.jsx"></script>
+<script type="text/babel" src="dashboard-mobile.jsx"></script>
+<script type="text/babel" src="settings.jsx"></script>
+<script type="text/babel" src="onboarding.jsx"></script>
+
+<script type="text/babel">
+const TWEAK_DEFAULTS = /*EDITMODE-BEGIN*/{
+  "palette": "warm",
+  "type": "fraunces",
+  "addTrigger": "floating"
+}/*EDITMODE-END*/;
+
+const PALETTES = [
+  { key: 'warm',  label: 'Cream' },
+  { key: 'bone',  label: 'Bone' },
+  { key: 'slate', label: 'Slate' },
+  { key: 'night', label: 'Night' },
+];
+const TYPES = [
+  { key: 'fraunces',  label: 'Fraunces' },
+  { key: 'cormorant', label: 'Cormorant' },
+  { key: 'eb',        label: 'EB Garamond' },
+];
+
+// Each artboard renders inside its own StoreProvider so they animate independently.
+// Pre-seed routes so the canvas shows dashboard / settings / onboarding side-by-side.
+
+function ArtboardWrapper({ initialRoute, children }) {
+  return (
+    <StoreProvider>
+      <RouteSetter route={initialRoute} />
+      {children}
+    </StoreProvider>
+  );
+}
+
+function RouteSetter({ route }) {
+  const [, dispatch] = useStore();
+  React.useEffect(() => { if (route) dispatch({ type: 'SET_ROUTE', route }); }, [route]);
+  return null;
+}
+
+function ScreenSwitcher({ width, height, mobile }) {
+  const [s] = useStore();
+  if (s.route === 'settings')   return <Settings   width={width} height={height} mobile={mobile} />;
+  if (s.route === 'onboarding') return <Onboarding width={width} height={height} mobile={mobile} />;
+  return <Dashboard width={width} height={height} mobile={mobile} />;
+}
+
+function ThemedWrap({ palette, type, children }) {
+  const [s] = useStore();
+  const effPalette = s.darkMode ? 'night' : palette;
+  const cls = `palette-${effPalette} type-${type}`;
+  return (
+    <div className={cls} style={{ width: '100%', height: '100%', overflow: 'auto', background: 'var(--bg)' }}>
+      {children}
+    </div>
+  );
+}
+
+function App() {
+  const [t, setTweak] = useTweaks(TWEAK_DEFAULTS);
+  const cls = `palette-${t.palette} type-${t.type}`;
+
+  const wrap = (initialRoute, kids) => (
+    <ArtboardWrapper initialRoute={initialRoute}>
+      <AddCfgCtx.Provider value={{ trigger: t.addTrigger }}>
+        <ThemedWrap palette={t.palette} type={t.type}>{kids}</ThemedWrap>
+      </AddCfgCtx.Provider>
+    </ArtboardWrapper>
+  );
+
+  return (
+    <div className={cls} style={{ width: '100%', height: '100vh' }}>
+      <DesignCanvas>
+        <DCSection id="desktop" title="Lumen — Desktop"
+          subtitle="Click any day, close days you forgot, edit rows inline. Try the four add-expense modes via the Tweaks panel.">
+          <DCArtboard id="dash" label="Dashboard" width={1000} height={1100}>
+            {wrap("dashboard",
+              <ScreenSwitcher width={1000} height={1100} mobile={false} />
+            )}
+          </DCArtboard>
+          <DCArtboard id="settings" label="Settings" width={1000} height={1100}>
+            {wrap("settings",
+              <ScreenSwitcher width={1000} height={1100} mobile={false} />
+            )}
+          </DCArtboard>
+          <DCArtboard id="onb" label="Onboarding" width={1000} height={1100}>
+            {wrap("onboarding",
+              <ScreenSwitcher width={1000} height={1100} mobile={false} />
+            )}
+          </DCArtboard>
+        </DCSection>
+
+        <DCSection id="mobile" title="Lumen — Mobile"
+          subtitle="Same flow at 375.">
+          <DCArtboard id="m-dash" label="Dashboard" width={375} height={900}>
+            {wrap("dashboard",
+              <ScreenSwitcher width={375} height={900} mobile={true} />
+            )}
+          </DCArtboard>
+          <DCArtboard id="m-settings" label="Settings" width={375} height={900}>
+            {wrap("settings",
+              <ScreenSwitcher width={375} height={900} mobile={true} />
+            )}
+          </DCArtboard>
+          <DCArtboard id="m-onb" label="Onboarding" width={375} height={900}>
+            {wrap("onboarding",
+              <ScreenSwitcher width={375} height={900} mobile={true} />
+            )}
+          </DCArtboard>
+        </DCSection>
+      </DesignCanvas>
+
+      <TweaksPanel>
+        <TweakSection label="Add expense" />
+        <TweakRadio label="Trigger placement" value={t.addTrigger}
+          options={ADD_TRIGGERS.map(m => ({ value: m.key, label: m.label }))}
+          onChange={v => setTweak('addTrigger', v)} />
+        <div style={{ font: 'italic 11px/1.4 ui-serif, Georgia', color: '#888',
+          margin: '-4px 6px 6px', maxWidth: 200 }}>
+          {ADD_TRIGGERS.find(m => m.key === t.addTrigger)?.sub}
+        </div>
+        <TweakSection label="Palette" />
+        <TweakSelect label="Tone" value={t.palette}
+          options={PALETTES.map(p => ({ value: p.key, label: p.label }))}
+          onChange={v => setTweak('palette', v)} />
+        <TweakSection label="Typography" />
+        <TweakSelect label="Display face" value={t.type}
+          options={TYPES.map(p => ({ value: p.key, label: p.label }))}
+          onChange={v => setTweak('type', v)} />
+      </TweaksPanel>
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(<App />);
+</script>
+
+</body>
+</html>
