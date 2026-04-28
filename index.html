@@ -1145,6 +1145,29 @@
     closedDays: [],
   };
 
+  // ============================================================
+  // PERSISTENCE
+  // ============================================================
+  const STORAGE_KEY = 'lumen.state.v1';
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // quota exceeded or storage disabled — fail silently
+    }
+  }
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved && typeof saved === 'object') Object.assign(state, saved);
+    } catch (e) {
+      // corrupt payload — ignore and keep defaults
+    }
+  }
+  loadState();
+
   const ui = {
     modalOpen: false, modalEditId: null,
     modalDay: TODAY.day, modalAmount: '', modalLabel: '', modalCat: 'food',
@@ -1212,6 +1235,7 @@
     else if (state.route === 'settings') root.appendChild(renderSettings(d));
     if (state.route !== 'settings') root.appendChild(renderFab());
     if (ui.modalOpen) root.appendChild(renderModal(d));
+    saveState();
   }
 
   function renderTopbar() {
