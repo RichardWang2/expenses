@@ -3,36 +3,40 @@
 <head>
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-<meta name="apple-mobile-web-app-capable" content="yes" />
-<meta name="apple-mobile-web-app-status-bar-style" content="default" />
-<meta name="apple-mobile-web-app-title" content="Lumen" />
-<meta name="theme-color" content="#f5efe4" />
 <title>Lumen — Expenses</title>
-<link rel="manifest" href="manifest.json" />
-<link rel="icon" type="image/png" sizes="192x192" href="icon-192.png" />
-<link rel="icon" type="image/png" sizes="512x512" href="icon-512.png" />
-<link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
 <style>
-  :root, .palette-warm {
+  :root {
     --bg: #f5efe4;
     --bg-soft: #ede5d4;
+    --paper: #faf5ea;
     --ink: #1c1812;
     --ink-soft: #8b7f6e;
+    --ink-faint: #b8ad99;
     --rule: #e3d9c5;
+    --rule-strong: #cdc1ab;
     --over: #9b3c3c;
+    --over-soft: #c47171;
+    --under: #5a7a4a;
+    --under-soft: #8aa57a;
     --font-display: 'Fraunces', serif;
-    --font-sans: 'JetBrains Mono', ui-monospace, monospace;
     --font-mono: 'JetBrains Mono', ui-monospace, monospace;
   }
   .palette-night {
     --bg: #1d1a14;
     --bg-soft: #25221b;
+    --paper: #221e17;
     --ink: #ece5d4;
     --ink-soft: #8b8170;
+    --ink-faint: #5a5447;
     --rule: #3a352a;
+    --rule-strong: #4a4435;
+    --over: #c47171;
+    --over-soft: #9b3c3c;
+    --under: #8aa57a;
+    --under-soft: #5a7a4a;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
@@ -40,1774 +44,2058 @@
   body {
     background: var(--bg);
     color: var(--ink);
-    font-family: var(--font-sans);
+    font-family: var(--font-mono);
     -webkit-font-smoothing: antialiased;
     overscroll-behavior: none;
-    transition: background 240ms ease, color 240ms ease;
+    transition: background 320ms ease, color 320ms ease;
   }
   button { font-family: inherit; cursor: pointer; border: none; background: transparent; color: inherit; }
-  input, select { font-family: inherit; outline: none; color: inherit; }
+  input { font-family: inherit; outline: none; color: inherit; }
   ::selection { background: var(--ink); color: var(--bg); }
 
-  /* ---------- Animations ---------- */
-  @keyframes fadeIn      { from { opacity: 0; }                       to { opacity: 1; } }
-  @keyframes sheetUp     { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: translateY(0); } }
-  @keyframes pulseDot    { 0%, 100% { opacity: 1; transform: scale(1); }
-                           50%      { opacity: 0.4; transform: scale(0.7); } }
-  @keyframes ghostIn     { 0%   { opacity: 0; transform: translateY(-6px); background: rgba(0,0,0,0.06); }
-                           60%  { opacity: 1; transform: translateY(0);    background: rgba(0,0,0,0.06); }
-                           100% { opacity: 1; transform: translateY(0);    background: transparent; } }
-  @keyframes slideInRight{ from { opacity: 0; transform: translateX(24px); } to { opacity: 1; transform: translateX(0); } }
+  /* ============================================ */
+  /* MOTION SYSTEM                                */
+  /* ============================================ */
+  @keyframes fadeIn   { from { opacity: 0; } to { opacity: 1; } }
+  @keyframes rise     { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes riseGentle { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+  @keyframes slideRight { from { opacity: 0; transform: translateX(14px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes slideLeft  { from { opacity: 0; transform: translateX(-14px); } to { opacity: 1; transform: translateX(0); } }
+  @keyframes drawLine { from { stroke-dashoffset: var(--draw-len, 240); } to { stroke-dashoffset: 0; } }
+  @keyframes pulseDot { 0%,100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.45; transform: scale(0.85); } }
+  @keyframes ghostIn  { 0% { opacity: 0; transform: translateY(-3px); background: rgba(0,0,0,0.06); }
+                        100% { opacity: 1; transform: translateY(0); background: transparent; } }
+  /* hairline rule scribes itself in left-to-right */
+  @keyframes ruleDraw { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+  /* calendar cells appear like cards being laid out */
+  @keyframes cellLay { from { opacity: 0; transform: translateY(4px) scale(0.96); }
+                       to   { opacity: 1; transform: translateY(0) scale(1); } }
+  /* donut wedges grow clockwise from each start angle */
+  @keyframes donutGrow { from { stroke-dashoffset: var(--off-start, 0); }
+                          to { stroke-dashoffset: 0; } }
+  /* number tick — a quick blink+resettle when count-up finishes */
+  @keyframes numSettle { 0% { opacity: 0.7; transform: translateY(-1px); }
+                         60% { opacity: 1; transform: translateY(0.5px); }
+                         100% { transform: translateY(0); } }
+  /* tap ripple on category rows */
+  @keyframes ripple { from { transform: scale(0); opacity: 0.18; } to { transform: scale(2.4); opacity: 0; } }
 
-  /* ---------- Shell ---------- */
-  .shell {
-    max-width: 1180px;
-    margin: 0 auto;
-    padding: 52px 60px 120px;
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 70px;
-    animation: fadeIn 320ms ease;
-  }
-
-  /* ---------- Mono labels ---------- */
-  .mono { font: 500 10px var(--font-mono); letter-spacing: 0.24em; color: var(--ink-soft); text-transform: uppercase; }
-  .mono-tight { font: 500 9px var(--font-mono); letter-spacing: 0.18em; color: var(--ink-soft); text-transform: uppercase; }
-  .display-italic { font: italic 400 16px/1 var(--font-display); color: var(--ink-soft); }
-
-  /* ---------- LEFT column ---------- */
-  .left { display: flex; flex-direction: column; min-height: 0; }
-  .left-head {
+  /* ============================================ */
+  /* TOP BAR                                      */
+  /* ============================================ */
+  .topbar {
+    position: sticky; top: 0; background: var(--bg);
+    z-index: 20;
+    padding: 14px 22px 10px;
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 36px; gap: 14px; flex-wrap: wrap;
+    border-bottom: 1px solid transparent;
+    transition: border-color 200ms ease, background 320ms ease;
   }
-  .month-tag { font: 500 10px var(--font-mono); letter-spacing: 0.28em; color: var(--ink-soft); text-transform: uppercase; }
-  .jump-today {
+  .topbar.scrolled { border-bottom-color: var(--rule); }
+  .brand {
+    font: 500 11px var(--font-mono); letter-spacing: 0.32em;
+    color: var(--ink); text-transform: uppercase;
     display: inline-flex; align-items: center; gap: 8px;
-    background: transparent; border: 1px solid var(--ink); color: var(--ink);
-    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
-    padding: 7px 12px; border-radius: 999px;
-  }
-  .jump-today::before {
-    content: ''; display: inline-block;
-    width: 6px; height: 6px; border-radius: 99px; background: var(--over);
-    animation: pulseDot 1.6s ease-in-out infinite;
-  }
-
-  .day-of-week { font: italic 400 16px/1 var(--font-display); color: var(--ink-soft); margin-bottom: 14px; }
-  .day-headline {
-    font: 400 84px/1 var(--font-display); letter-spacing: -0.01em; margin: 0;
-  }
-  .today-label {
-    font: 500 10px var(--font-mono); letter-spacing: 0.24em; color: var(--ink-soft);
-    text-transform: uppercase; margin-top: 48px; margin-bottom: 8px;
-  }
-  .amount-big {
-    display: flex; align-items: flex-start; gap: 4px; margin-bottom: 14px;
-    font: 300 96px/0.9 var(--font-display); color: var(--ink);
-  }
-  .amount-big .currency {
-    font-size: 0.32em; margin-top: 0.18em; color: var(--ink-soft);
-  }
-  .amount-big .num { letter-spacing: -0.04em; }
-  .amount-big.closed { color: var(--ink-soft); text-decoration: line-through; }
-
-  .delta {
-    font: 500 10px var(--font-mono); letter-spacing: 0.18em;
-    text-transform: uppercase; color: var(--ink-soft); margin-bottom: 24px;
-    min-height: 14px;
-  }
-  .delta.over { color: var(--over); }
-
-  .day-rows { margin-bottom: 28px; }
-  .day-section { display: flex; flex-direction: column; }
-  .day-section + .day-section { margin-top: 18px; }
-  .day-section-head {
-    display: flex; align-items: baseline; gap: 10px;
-    padding: 10px 0 4px; cursor: pointer;
-    border-top: 1px solid var(--rule);
-  }
-  .day-section-head .mono-tight { color: var(--ink); }
-  .day-section-head:hover .mono-tight { color: var(--ink); }
-  .day-section-head .closed-tag { color: var(--ink-soft); }
-  .day-row {
-    display: grid; grid-template-columns: 14px 1fr auto;
-    gap: 12px; align-items: center;
-    padding: 14px 0; border-top: 1px solid var(--rule);
-    cursor: pointer; transition: background 150ms ease;
-  }
-  .day-row:hover { background: rgba(0,0,0,0.02); margin-inline: -8px; padding-inline: 8px; }
-  .day-row.ghost { animation: ghostIn 600ms cubic-bezier(0.22,1,0.36,1); }
-  .day-row .dot { width: 8px; height: 8px; border-radius: 99px; justify-self: center; }
-  .day-row .label { font: 400 15px var(--font-sans); color: var(--ink); margin-bottom: 2px; }
-  .day-row .cat { font: 500 9px var(--font-mono); letter-spacing: 0.18em; color: var(--ink-soft); text-transform: uppercase; }
-  .day-row .amt { font: italic 400 24px/1 var(--font-display); }
-  .day-row .x {
-    opacity: 0; background: transparent; border: none; color: var(--ink-soft);
-    font-size: 18px; padding: 2px; margin-left: 6px; transition: opacity 150ms;
-  }
-  .day-row:hover .x { opacity: 0.6; }
-  .day-row .row-actions { display: flex; align-items: center; gap: 0; }
-
-  .day-row.editing { grid-template-columns: auto 1fr 100px; cursor: default; background: transparent; }
-  .day-row.editing select {
-    font: 500 10px var(--font-mono); letter-spacing: 0.18em;
-    background: transparent; border: 1px solid var(--rule);
-    color: var(--ink); padding: 4px 6px; text-transform: uppercase;
-  }
-  .day-row.editing input[type="text"] {
-    font: 400 15px var(--font-sans); color: var(--ink);
-    background: transparent; border: none; border-bottom: 1px solid var(--ink);
-    padding: 4px 0; width: 100%;
-  }
-  .day-row.editing .amt-edit {
-    display: flex; align-items: baseline; gap: 4px; justify-content: flex-end;
-  }
-  .day-row.editing .amt-edit .currency-sm { font: italic 400 16px var(--font-display); color: var(--ink-soft); }
-  .day-row.editing .amt-edit input {
-    width: 60px; font: italic 400 22px var(--font-display); text-align: right;
-    background: transparent; border: none; border-bottom: 1px solid var(--ink); padding: 2px 0;
-  }
-
-  .day-empty {
-    font: italic 400 15px/1.5 var(--font-display); color: var(--ink-soft);
-    padding: 14px 0; border-top: 1px solid var(--rule);
-    display: flex; justify-content: space-between; align-items: center; gap: 12px;
-  }
-
-  .pill {
-    background: transparent; color: var(--ink-soft);
-    border: 1px solid var(--rule); cursor: pointer;
-    font: 500 9px var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;
-    padding: 6px 12px; border-radius: 999px;
-    transition: all 150ms ease;
-  }
-  .pill:hover { color: var(--ink); border-color: var(--ink); }
-  .pill.active { background: var(--ink); color: var(--bg); border-color: var(--ink); }
-
-  .close-day-row {
-    padding-top: 10px; display: flex; justify-content: flex-end;
-  }
-
-  .pacing-msg {
-    font: italic 400 16px/1.5 var(--font-display); color: var(--ink-soft);
-    margin-bottom: 32px; max-width: 380px;
-  }
-
-  /* Budget rail */
-  .budget-rail { margin-top: auto; }
-  .rail-track { position: relative; height: 1px; background: var(--rule); margin-bottom: 14px; }
-  .rail-fill {
-    position: absolute; left: 0; top: -1px; height: 3px;
-    background: var(--ink);
-    transition: width 600ms cubic-bezier(0.22,1,0.36,1), background 200ms;
-  }
-  .rail-fill.over { background: var(--over); }
-  .rail-pace {
-    position: absolute; top: -4px; height: 9px; width: 1px;
-    background: var(--ink-soft);
-  }
-  .rail-meta, .rail-meta-2 {
-    display: flex; justify-content: space-between;
-    font: 500 10px var(--font-mono); letter-spacing: 0.2em; color: var(--ink-soft);
-    text-transform: uppercase;
-  }
-  .rail-meta-2 { font-size: 9px; letter-spacing: 0.18em; margin-top: 6px; opacity: 0.75; }
-  .rail-over { color: var(--over); }
-
-  /* ---------- RIGHT column ---------- */
-  .right { display: flex; flex-direction: column; gap: 36px; padding-top: 28px; }
-  .right-head { display: flex; justify-content: space-between; align-items: center; }
-  .right-head h2 { font: italic 400 22px/1 var(--font-display); margin: 0; font-weight: 400; }
-  .right-controls { display: flex; gap: 14px; align-items: center; }
-  .icon-btn {
-    background: transparent; border: none; color: var(--ink); cursor: pointer;
-    padding: 4px; display: inline-flex; align-items: center; justify-content: center;
-  }
-  .chev {
-    width: 26px; height: 26px; padding: 0;
-    display: flex; align-items: center; justify-content: center;
-  }
-
-  /* Calendar */
-  .cal-dow {
-    display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; margin-bottom: 8px;
-  }
-  .cal-dow div {
-    font: 500 10px var(--font-mono); letter-spacing: 0.18em;
-    color: var(--ink-soft); text-align: center; padding: 4px 0;
-  }
-  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-  .cal-cell {
-    position: relative; aspect-ratio: 1 / 1;
-  }
-  .cal-cell .cell-btn {
-    width: 100%; height: 100%; position: relative; padding: 6px;
-    background: transparent; border: 1px solid var(--rule); border-radius: 2px;
-    cursor: pointer; display: flex; flex-direction: column; justify-content: space-between;
-    text-align: left; font-family: inherit;
-    transition: background 200ms ease, border-color 200ms ease, transform 150ms ease;
-  }
-  .cal-cell .cell-btn:hover { transform: translateY(-1px); }
-  .cal-cell.today .cell-btn { border: 1.5px solid var(--ink); }
-  .cal-cell.selected .cell-btn { box-shadow: inset 0 0 0 1px var(--ink); border-color: var(--ink); }
-  .cal-cell.closed { opacity: 0.55; }
-  .cal-cell .cell-head { display: flex; align-items: center; gap: 4px; }
-  .cal-cell .cell-dot { width: 5px; height: 5px; border-radius: 99px; }
-  .cal-cell .cell-num {
-    font: 500 10px var(--font-mono); letter-spacing: 0.08em;
-    color: var(--ink-soft);
-  }
-  .cal-cell.today .cell-num { color: var(--ink); font-weight: 700; }
-  .cal-cell.closed .cell-num { text-decoration: line-through; }
-  .cal-cell .today-pulse {
-    margin-left: auto; display: inline-block;
-    width: 5px; height: 5px; border-radius: 99px; background: var(--over);
-    animation: pulseDot 1.6s ease-in-out infinite;
-  }
-  .cal-cell .cell-amt { font: italic 400 13px/1 var(--font-display); color: var(--ink); }
-  .cal-cell .cell-dash { font: 500 8px var(--font-mono); letter-spacing: 0.18em; color: var(--ink-soft); }
-  .cal-cell .cell-toggle {
-    position: absolute; top: 3px; right: 3px; z-index: 2;
-    width: 16px; height: 16px; border-radius: 99px;
-    background: var(--bg); border: 1px solid var(--rule);
-    color: var(--ink-soft); padding: 0;
-    display: flex; align-items: center; justify-content: center;
-    font: 500 10px var(--font-mono); line-height: 1;
-    opacity: 0; transition: opacity 150ms ease;
     cursor: pointer;
   }
-  .cal-cell:hover .cell-toggle { opacity: 1; }
-
-  /* By Category */
-  .by-cat-head {
-    display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 18px;
+  .brand .dot {
+    display: inline-block; width: 5px; height: 5px;
+    border-radius: 99px; background: var(--ink);
+    transform: translateY(-1px);
+    transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .by-cat-grid {
-    display: grid; grid-template-columns: 160px 1fr; gap: 28px; align-items: center;
+  .brand:hover .dot { transform: translateY(-1px) scale(1.4); }
+  .top-actions { display: flex; align-items: center; gap: 14px; }
+  .view-toggle {
+    display: inline-flex; align-items: center; gap: 12px;
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-faint);
   }
-  .donut-wrap { display: flex; align-items: center; justify-content: center; }
-  .cat-list { display: flex; flex-direction: column; gap: 10px; }
-  .cat-row {
-    display: grid; grid-template-columns: 12px 1fr auto auto;
-    gap: 12px; align-items: center; padding: 8px 0;
-    border-bottom: 1px dotted var(--rule);
+  .view-toggle button {
+    color: inherit; padding: 4px 0; position: relative;
+    transition: color 200ms ease;
   }
-  .cat-row.budget { grid-template-columns: 12px 1fr auto auto; padding: 4px 0; border-bottom: none; }
-  .cat-row .cat-dot { width: 8px; height: 8px; border-radius: 99px; justify-self: center; }
-  .cat-row .cat-name { font: 400 14px var(--font-sans); color: var(--ink); }
-  .cat-row .cat-amt { font: italic 400 18px var(--font-display); color: var(--ink); }
-  .cat-row .cat-pct { font: 500 10px var(--font-mono); letter-spacing: 0.1em; color: var(--ink-soft); text-align: right; min-width: 40px; }
-  .cat-row .cat-budget { font: 500 10px var(--font-mono); letter-spacing: 0.1em; color: var(--ink-soft); text-align: right; min-width: 44px; }
-  .cat-row.budget .cat-bar-wrap { min-width: 0; }
-  .cat-row.budget .cat-bar-track {
-    height: 2px; background: var(--rule); margin-top: 6px; position: relative;
+  .view-toggle button.active { color: var(--ink); }
+  .view-toggle button.active::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: -3px;
+    height: 1px; background: var(--ink);
+    transform-origin: left center;
+    animation: ruleDraw 280ms cubic-bezier(0.65, 0, 0.35, 1);
   }
-  .cat-row.budget .cat-bar-fill {
-    position: absolute; left: 0; top: 0; height: 100%;
-    transition: width 600ms cubic-bezier(0.22,1,0.36,1), background 200ms;
-  }
-  .cat-row.budget .cat-amt { font: italic 400 16px var(--font-display); }
-
-  /* ---------- Top-right toolbar (persists on dashboard + settings) ---------- */
-  .topbar {
-    position: fixed; top: 0; right: 0; z-index: 30;
-    display: flex; align-items: center; gap: 4px;
-    padding: 18px 24px;
-    padding-top: calc(18px + env(safe-area-inset-top));
-    padding-right: calc(24px + env(safe-area-inset-right));
-  }
-  .topbar .icon-btn {
-    background: transparent; border: none; color: var(--ink); cursor: pointer;
-    padding: 8px; border-radius: 999px;
+  .icon-btn {
+    color: var(--ink-soft); padding: 6px;
     display: inline-flex; align-items: center; justify-content: center;
-    transition: background 150ms ease;
+    border-radius: 99px;
+    transition: color 150ms, background 150ms, transform 200ms;
   }
-  .topbar .icon-btn:hover { background: rgba(0,0,0,0.06); }
-  .palette-night .topbar .icon-btn:hover { background: rgba(255,255,255,0.06); }
-  .topbar .icon-btn.active { color: var(--ink); }
+  .icon-btn:active { color: var(--ink); background: rgba(0,0,0,0.05); transform: scale(0.92); }
+  .palette-night .icon-btn:active { background: rgba(255,255,255,0.06); }
 
-  /* ---------- Floating LOG EXPENSE pill ---------- */
-  .fab-wrap {
-    position: fixed; left: 0; right: 0; bottom: 0;
-    display: flex; justify-content: center;
-    pointer-events: none; z-index: 40;
-    padding: 44px 0 26px;
-    background-image: linear-gradient(to bottom, transparent 0%, var(--bg) 65%);
-    padding-bottom: calc(26px + env(safe-area-inset-bottom));
+  /* ============================================ */
+  /* SHELL                                        */
+  /* ============================================ */
+  .shell {
+    padding: 28px 22px 140px;
+    max-width: 480px; margin: 0 auto;
   }
-  .fab-pill {
-    pointer-events: auto;
-    display: inline-flex; align-items: center; gap: 10px;
-    background: var(--ink); color: var(--bg);
-    border: 1px solid var(--ink);
-    font: 500 11px var(--font-mono); letter-spacing: 0.24em; text-transform: uppercase;
-    padding: 14px 28px; border-radius: 999px;
-    box-shadow: 0 12px 32px rgba(0,0,0,0.22), 0 2px 6px rgba(0,0,0,0.12);
-    transition: transform 200ms cubic-bezier(0.22,1,0.36,1), box-shadow 200ms ease;
-  }
-  .fab-pill:hover { transform: translateY(-2px); box-shadow: 0 18px 40px rgba(0,0,0,0.28), 0 2px 6px rgba(0,0,0,0.14); }
-  .fab-pill .plus { font-size: 18px; line-height: 1; font-weight: 300; margin-top: -1px; }
+  .shell.daily   { animation: slideLeft  320ms cubic-bezier(0.22,1,0.36,1); }
+  .shell.monthly { animation: slideRight 320ms cubic-bezier(0.22,1,0.36,1); }
+  .shell.settings,
+  .shell.cat-detail { animation: rise 320ms cubic-bezier(0.22,1,0.36,1); }
 
-  /* ---------- Modal ---------- */
-  .modal-backdrop {
-    position: fixed; inset: 0;
-    background: rgba(28,24,18,0.32); backdrop-filter: blur(4px);
-    display: flex; align-items: center; justify-content: center;
-    z-index: 50; animation: fadeIn 220ms ease;
-  }
-  .modal {
-    background: var(--bg); color: var(--ink);
-    width: 440px; max-width: 92%; padding: 32px 36px 28px; border-radius: 4px;
-    box-shadow: 0 30px 80px rgba(0,0,0,0.18);
-    border: 1px solid var(--rule);
-    font-family: var(--font-sans);
-    animation: sheetUp 320ms cubic-bezier(0.22,1,0.36,1);
-  }
-  .modal .modal-kicker { font: 500 10px var(--font-mono); letter-spacing: 0.22em; color: var(--ink-soft); margin-bottom: 18px; text-transform: uppercase; }
-  .modal .amount-input-wrap {
-    display: flex; align-items: baseline; gap: 6px; margin-bottom: 24px;
-    border-bottom: 1px solid var(--rule); padding-bottom: 14px;
-  }
-  .modal .amount-input-wrap .currency {
-    font: 300 36px/1 var(--font-display); color: var(--ink-soft);
-  }
-  .modal .amount-input-wrap input {
-    flex: 1; font: 400 44px/1 var(--font-display); color: var(--ink);
-    border: none; outline: none; background: transparent; min-width: 0;
-    -webkit-appearance: none;
-  }
-  .modal .field-label { font: 500 10px var(--font-mono); letter-spacing: 0.18em; color: var(--ink-soft); margin-bottom: 10px; text-transform: uppercase; }
-  .cat-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 22px; }
-  .cat-chip {
-    display: inline-flex; align-items: center; gap: 8px;
-    padding: 7px 12px; border-radius: 999px;
-    border: 1px solid var(--rule); background: transparent; color: var(--ink);
-    cursor: pointer; font: 400 13px var(--font-sans);
-    transition: all 150ms ease;
-  }
-  .cat-chip .chip-dot { width: 8px; height: 8px; border-radius: 99px; }
-  .modal .note-day-row {
-    display: grid; grid-template-columns: 1fr 100px; gap: 12px; margin-bottom: 24px;
-  }
-  .modal .note-day-row .field-label { margin-bottom: 6px; font-size: 10px; }
-  .modal .note-day-row input {
-    width: 100%; font: 400 14px var(--font-sans); color: var(--ink);
-    background: transparent; border: none; border-bottom: 1px solid var(--rule);
-    padding: 6px 0; outline: none;
-  }
-  .modal-actions { display: flex; justify-content: flex-end; gap: 14px; }
-  .btn-cancel {
-    background: transparent; border: none; color: var(--ink-soft); cursor: pointer;
-    font: 500 11px var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;
-    padding: 10px 14px;
-  }
-  .btn-add {
-    background: var(--ink); color: var(--bg); border: none; cursor: pointer;
-    font: 500 11px var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;
-    padding: 10px 18px; border-radius: 2px;
-  }
-  .btn-add:disabled { opacity: 0.4; cursor: default; }
-
-  /* ---------- Settings page ---------- */
-  .settings {
-    max-width: 900px; margin: 0 auto;
-    padding: 52px 60px 80px;
-    animation: slideInRight 360ms cubic-bezier(0.22,1,0.36,1);
-  }
-  .set-top {
+  /* ============================================ */
+  /* DATE STRIP                                   */
+  /* ============================================ */
+  .date-strip {
     display: flex; justify-content: space-between; align-items: center;
-    margin-bottom: 40px;
+    padding-bottom: 12px;
+    margin-bottom: 36px;
+    position: relative;
   }
-  .set-back {
-    background: transparent; border: none; cursor: pointer;
-    font: 500 10px var(--font-mono); letter-spacing: 0.24em;
-    color: var(--ink-soft); padding: 0;
-    display: inline-flex; align-items: center; gap: 8px;
+  .date-strip::after {
+    content: ''; position: absolute; left: 0; right: 0; bottom: 0;
+    height: 1px; background: var(--rule);
+    transform-origin: left center;
+    animation: ruleDraw 600ms 80ms cubic-bezier(0.65, 0, 0.35, 1) backwards;
+  }
+  .date-strip .month {
+    font: 500 10px var(--font-mono); letter-spacing: 0.28em;
+    color: var(--ink-soft); text-transform: uppercase;
+  }
+  .date-strip .day-nav {
+    display: flex; align-items: center; gap: 2px;
+    color: var(--ink-soft);
+  }
+  .date-strip .chev {
+    width: 32px; height: 32px; border-radius: 99px;
+    display: inline-flex; align-items: center; justify-content: center;
+    transition: transform 200ms;
+  }
+  .date-strip .chev:active { background: rgba(0,0,0,0.05); color: var(--ink); transform: scale(0.9); }
+  .palette-night .date-strip .chev:active { background: rgba(255,255,255,0.06); }
+  .date-strip .today-jump {
+    display: inline-flex; align-items: center; gap: 7px;
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+    padding: 6px 10px 6px 12px;
+    border-left: 1px solid var(--rule);
+    margin-left: 4px;
+  }
+  .today-jump .pulse {
+    width: 5px; height: 5px; border-radius: 99px;
+    background: var(--over); animation: pulseDot 2s ease-in-out infinite;
+  }
+
+  /* ============================================ */
+  /* DAILY VIEW                                   */
+  /* ============================================ */
+  .greeting {
+    font: italic 400 16px/1.4 var(--font-display);
+    color: var(--ink-soft);
+    margin-top: -8px;
+    margin-bottom: 22px;
+    animation: riseGentle 360ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .greeting .name {
+    color: var(--ink);
+    font-style: italic;
+  }
+  .day-header {
+    display: flex; justify-content: space-between; align-items: flex-end;
+    gap: 14px;
+    margin-bottom: 22px;
+    animation: riseGentle 380ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .day-header .date-block { display: flex; flex-direction: column; gap: 2px; }
+  .day-header .dow {
+    font: italic 400 14px var(--font-display);
+    color: var(--ink-soft);
+  }
+  .day-header .day-num {
+    font: 400 36px/1 var(--font-display);
+    letter-spacing: -0.015em;
+    color: var(--ink);
+  }
+  .day-header .day-num .ord {
+    font-size: 0.4em; vertical-align: super;
+    color: var(--ink-soft); margin-left: 2px;
+    letter-spacing: 0;
+  }
+  .day-header .mini-spark {
+    display: flex; flex-direction: column; align-items: flex-end; gap: 4px;
+    flex-shrink: 0;
+  }
+  .day-header .mini-spark .lbl {
+    font: 500 8px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-faint);
+  }
+  .day-header .mini-spark svg { width: 88px; height: 26px; display: block; }
+  .day-header .mini-spark .ms-line {
+    fill: none; stroke: var(--ink-soft); stroke-width: 1.1;
+    stroke-linejoin: round; stroke-linecap: round;
+    --draw-len: 240;
+    stroke-dasharray: 240; stroke-dashoffset: 0;
+    animation: drawLine 1100ms 200ms ease-out backwards;
+  }
+  .day-header .mini-spark .ms-baseline {
+    stroke: var(--ink-faint); stroke-width: 0.5;
+    stroke-dasharray: 1.5 2;
+  }
+  .day-header .mini-spark .ms-today {
+    fill: var(--bg); stroke: var(--ink); stroke-width: 1.1;
+    animation: fadeIn 600ms 1100ms backwards;
+  }
+
+  .figure-block { margin-bottom: 28px;
+    animation: riseGentle 420ms 80ms cubic-bezier(0.22,1,0.36,1) backwards; }
+  .figure-label {
+    font: 500 10px var(--font-mono); letter-spacing: 0.26em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 12px;
+  }
+  .figure-amount {
+    display: flex; align-items: baseline; gap: 6px;
+    font: 300 104px/0.9 var(--font-display);
+    letter-spacing: -0.045em;
+    margin-bottom: 22px;
+  }
+  .figure-amount .currency {
+    font-size: 0.3em; color: var(--ink-soft);
+    letter-spacing: 0; align-self: flex-start; margin-top: 0.22em;
+  }
+  .figure-amount.over { color: var(--over); }
+  .figure-amount.over .currency { color: var(--over); opacity: 0.7; }
+  .figure-amount .num { font-feature-settings: 'tnum' 1; display: inline-block; }
+  .figure-amount .num.settled { animation: numSettle 200ms ease-out; }
+
+  .figure-pace {
+    font: italic 400 15px/1.4 var(--font-display);
+    color: var(--ink-soft);
+    padding-top: 2px;
+  }
+  .figure-pace .pace-num {
+    color: var(--ink); font-feature-settings: 'tnum' 1; font-style: italic;
+  }
+  .figure-pace .pace-num.over  { color: var(--over); }
+  .figure-pace .pace-num.under { color: var(--under); }
+
+  /* ledger */
+  .ledger-section { margin-bottom: 40px;
+    animation: riseGentle 460ms 160ms cubic-bezier(0.22,1,0.36,1) backwards; }
+  .ledger-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 16px;
+  }
+  .ledger-head .ttl {
+    font: 400 24px var(--font-display);
+    letter-spacing: -0.01em; color: var(--ink);
+  }
+  .ledger-head .meta {
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .ledger-row {
+    display: grid; grid-template-columns: 12px 1fr auto 24px;
+    gap: 14px; align-items: center;
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+    position: relative;
+    user-select: none; cursor: pointer;
+    transition: padding-left 220ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .ledger-row:last-child { border-bottom: 1px solid var(--rule); }
+  .ledger-row:hover { padding-left: 6px; }
+  .ledger-row:active { background: rgba(0,0,0,0.04); margin-inline: -8px; padding-inline: 8px; border-radius: 4px; }
+  .palette-night .ledger-row:active { background: rgba(255,255,255,0.04); }
+  .ledger-row.ghost { animation: ghostIn 700ms cubic-bezier(0.22,1,0.36,1); }
+  .ledger-row .dot { width: 7px; height: 7px; border-radius: 99px; justify-self: center; }
+  .ledger-row .body {
+    display: flex; flex-direction: column; gap: 3px; min-width: 0;
+  }
+  .ledger-row .label {
+    font: 400 15px var(--font-mono); color: var(--ink);
+    letter-spacing: 0.005em;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .ledger-row .cat-inline {
+    font: italic 400 12px var(--font-display);
+    color: var(--ink-soft);
+  }
+  .ledger-row .amt {
+    font: italic 400 24px/1 var(--font-display);
+    color: var(--ink); font-feature-settings: 'tnum' 1;
+  }
+  .ledger-row .x {
+    color: var(--ink-faint); font-size: 18px;
+    width: 24px; height: 24px; border-radius: 99px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 150ms, background 150ms, transform 150ms;
+  }
+  .ledger-row .x:active { color: var(--over); background: rgba(155,60,60,0.1); transform: scale(0.85); }
+
+  .ledger-total {
+    display: flex; justify-content: space-between; align-items: baseline;
+    padding: 14px 0 4px;
+    border-top: 1px solid var(--rule);
+    margin-top: -1px;
+  }
+  .ledger-total .lbl {
+    font: 500 9px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .ledger-total .sum {
+    font: italic 400 22px/1 var(--font-display);
+    color: var(--ink); font-feature-settings: 'tnum' 1;
+  }
+
+  .ledger-empty {
+    padding: 28px 0; border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    text-align: center;
+    font: italic 400 17px var(--font-display);
+    color: var(--ink-soft);
+  }
+  .ledger-empty .hint {
+    display: block; margin-top: 8px;
+    font: 500 9px var(--font-mono); letter-spacing: 0.22em;
+    color: var(--ink-faint); text-transform: uppercase;
+    font-style: normal;
+  }
+  .close-row { display: flex; justify-content: flex-end; margin-top: 16px; }
+  .ghost-pill {
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+    padding: 8px 0;
+    border-bottom: 1px solid transparent;
+    transition: color 150ms, border-color 150ms;
+  }
+  .ghost-pill:active, .ghost-pill.active { color: var(--ink); border-bottom-color: var(--ink); }
+
+  /* ============================================ */
+  /* MONTHLY VIEW                                 */
+  /* ============================================ */
+  .month-headline-wrap {
+    margin-bottom: 28px;
+    animation: riseGentle 380ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .month-kicker {
+    font: italic 400 15px var(--font-display);
+    color: var(--ink-soft); margin-bottom: 4px;
+  }
+  .month-headline {
+    font: 400 48px/0.95 var(--font-display);
+    letter-spacing: -0.015em;
+  }
+
+  .month-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 36px;
+    animation: riseGentle 420ms 60ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
+  .month-stats .cell { padding: 14px 12px 14px 0; }
+  .month-stats .cell + .cell {
+    padding-left: 12px; border-left: 1px solid var(--rule);
+  }
+  .month-stats .lbl {
+    font: 500 9px var(--font-mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .month-stats .val {
+    font: 400 26px/1 var(--font-display);
+    letter-spacing: -0.015em;
+    font-feature-settings: 'tnum' 1;
+  }
+  .month-stats .val.over  { color: var(--over); }
+  .month-stats .val.under { color: var(--under); }
+  .month-stats .sub {
+    font: italic 400 11px var(--font-display);
+    color: var(--ink-faint); margin-top: 4px;
+    line-height: 1.2;
+  }
+  .month-stats .sub.over  { color: var(--over); }
+  .month-stats .sub.under { color: var(--under); }
+
+  /* ---------- monthly chart (cumulative line) ---------- */
+  .chart-section {
+    margin-bottom: 44px;
+    animation: riseGentle 460ms 120ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
+  .chart-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .chart-head .ttl {
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .chart-head .legend {
+    display: flex; gap: 14px; align-items: center;
+    font: italic 400 11px var(--font-display);
+    color: var(--ink-faint);
+  }
+  .chart-head .legend .leg {
+    display: inline-flex; align-items: center; gap: 6px;
+  }
+  .chart-head .legend .leg::before {
+    content: ''; width: 12px; height: 1.5px; background: var(--ink-faint); border-radius: 1px;
+  }
+  .chart-head .legend .leg.actual::before { background: var(--ink); height: 1.5px; }
+  .chart-head .legend .leg.budget::before {
+    background: transparent;
+    border-top: 1px dashed var(--ink-faint);
+    height: 0;
+  }
+
+  .chart-svg-wrap {
+    position: relative;
+    padding: 8px 0 0;
+  }
+  .chart-svg { width: 100%; height: 160px; display: block; overflow: visible; }
+  .chart-budget-line {
+    stroke: var(--ink-faint); stroke-width: 1;
+    stroke-dasharray: 2.5 3.5;
+    fill: none;
+    animation: fadeIn 320ms ease;
+  }
+  .chart-actual-line {
+    stroke: var(--ink); stroke-width: 1.5;
+    stroke-linejoin: round; stroke-linecap: round; fill: none;
+    stroke-dashoffset: 0;
+    animation: drawLine 1100ms 120ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
+  .chart-today-marker {
+    fill: var(--bg); stroke: var(--ink); stroke-width: 1.5;
+    animation: fadeIn 320ms 1180ms backwards;
+  }
+  .chart-axis {
+    display: flex; justify-content: space-between;
+    margin-top: 10px;
+    font: 500 9px var(--font-mono); letter-spacing: 0.16em;
+    color: var(--ink-faint); text-transform: uppercase;
+  }
+  .chart-axis span.today { color: var(--ink); font-weight: 600; }
+  .chart-summary {
+    margin-top: 14px;
+    font: italic 400 13px/1.4 var(--font-display);
+    color: var(--ink-soft);
+  }
+  .chart-summary .num {
+    color: var(--ink); font-feature-settings: 'tnum' 1; font-style: italic;
+  }
+  .chart-summary .num.over  { color: var(--over); }
+  .chart-summary .num.under { color: var(--under); }
+
+  /* ---------- calendar ---------- */
+  .cal-section {
+    margin-bottom: 44px;
+    animation: riseGentle 460ms 180ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
+  .cal-head {
+    display: flex; justify-content: space-between; align-items: baseline;
+    margin-bottom: 14px;
+  }
+  .cal-head .ttl {
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .cal-head .legend {
+    display: flex; gap: 12px; align-items: center;
+    font: italic 400 11px var(--font-display);
+    color: var(--ink-faint);
+  }
+  .cal-head .legend .leg { display: inline-flex; align-items: center; gap: 5px; }
+  .cal-head .legend .leg::before {
+    content: ''; width: 8px; height: 8px; border-radius: 2px;
+  }
+  .cal-head .legend .leg.under::before { background: var(--under-soft); opacity: 0.45; }
+  .cal-head .legend .leg.over::before  { background: var(--over-soft); opacity: 0.45; }
+  .cal-dow {
+    display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px;
+    margin-bottom: 6px;
+  }
+  .cal-dow div {
+    font: 500 9px var(--font-mono); letter-spacing: 0.16em;
+    color: var(--ink-faint); text-align: center; padding: 4px 0;
     text-transform: uppercase;
   }
-  .set-back:hover { color: var(--ink); }
-  .set-kicker { font: italic 400 15px var(--font-display); color: var(--ink-soft); margin-bottom: 6px; }
-  .set-headline {
-    font: 400 64px/1 var(--font-display); letter-spacing: -0.01em;
-    margin: 0 0 48px; font-weight: 400;
+  .cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+  .cal-cell { aspect-ratio: 1 / 1; position: relative;
+    animation: cellLay 360ms cubic-bezier(0.22,1,0.36,1) backwards;
   }
+  .cal-cell .cell-btn {
+    width: 100%; height: 100%;
+    background: transparent;
+    border: 1px solid var(--rule);
+    border-radius: 6px;
+    padding: 6px 5px 5px;
+    display: flex; flex-direction: column; justify-content: space-between;
+    text-align: left; font-family: inherit;
+    transition: background 200ms, border-color 200ms, transform 180ms;
+    overflow: hidden; position: relative;
+  }
+  .cal-cell .cell-btn:active { transform: scale(0.94); }
+  .cal-cell.empty .cell-btn {
+    border-color: transparent; pointer-events: none;
+  }
+  .cal-cell.today .cell-btn {
+    border-color: var(--ink);
+    border-width: 1.5px;
+  }
+  .cal-cell.selected .cell-btn {
+    background: var(--ink) !important; color: var(--bg);
+  }
+  .cal-cell.selected .cell-num,
+  .cal-cell.selected .cell-amt { color: var(--bg); }
+  .cal-cell .cell-num {
+    font: 500 10px var(--font-mono);
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+  }
+  .cal-cell.today .cell-num { color: var(--ink); font-weight: 600; }
+  .cal-cell .cell-amt {
+    font: italic 400 11px var(--font-display);
+    color: var(--ink); line-height: 1;
+    font-feature-settings: 'tnum' 1;
+    align-self: flex-start;
+  }
+  .cal-cell.future .cell-num { color: var(--ink-faint); }
+  .cal-cell.future .cell-btn { border-style: dashed; border-color: var(--rule); }
 
-  .set-stat-strip {
-    display: grid; grid-template-columns: repeat(3, 1fr);
-    border-top: 1px solid var(--rule); border-bottom: 1px solid var(--rule);
+  /* ---------- by-category section ---------- */
+  .cat-section {
     margin-bottom: 36px;
+    animation: riseGentle 480ms 240ms cubic-bezier(0.22,1,0.36,1) backwards;
   }
-  .set-stat { padding: 20px 24px; border-right: 1px solid var(--rule); }
-  .set-stat:last-child { border-right: none; }
-  .set-stat .lbl { font: 500 9px var(--font-mono); letter-spacing: 0.22em; color: var(--ink-soft); margin-bottom: 8px; text-transform: uppercase; }
-  .set-stat .val { font: 400 36px/1 var(--font-display); letter-spacing: -0.02em; }
-  .set-stat .sub { font: italic 400 12px var(--font-display); color: var(--ink-soft); margin-top: 4px; }
+  .cat-section-head {
+    display: flex; justify-content: space-between; align-items: center;
+    margin-bottom: 22px;
+    gap: 12px;
+  }
+  .cat-section-head .ttl {
+    font: 400 24px var(--font-display);
+    letter-spacing: -0.01em; color: var(--ink);
+  }
+  .cat-section-head .right {
+    display: flex; align-items: center; gap: 12px;
+  }
+  .cat-section-head .meta {
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
 
-  .set-section { margin-bottom: 36px; }
+  /* donut chart */
+  .donut-wrap {
+    display: flex; align-items: center; gap: 22px;
+    margin-bottom: 28px;
+    padding: 8px 0 4px;
+  }
+  .donut-wrap svg {
+    flex-shrink: 0;
+    overflow: visible;
+  }
+  .donut-track { stroke: var(--rule); fill: none; }
+  .donut-arc {
+    fill: none; stroke-linecap: butt;
+    transition: stroke-width 200ms;
+  }
+  .donut-center {
+    display: flex; flex-direction: column; gap: 2px; min-width: 0;
+  }
+  .donut-center .lbl {
+    font: 500 9px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+  .donut-center .val {
+    font: 400 30px/1 var(--font-display);
+    color: var(--ink); letter-spacing: -0.015em;
+    font-feature-settings: 'tnum' 1;
+    margin-top: 2px;
+  }
+  .donut-center .top-cat {
+    font: italic 400 13px var(--font-display);
+    color: var(--ink-soft); margin-top: 6px;
+  }
+  .donut-center .top-cat .swatch {
+    display: inline-block; width: 7px; height: 7px; border-radius: 99px;
+    margin-right: 6px; transform: translateY(-1px);
+  }
+
+  /* category rows */
+  .cat-row {
+    display: grid; grid-template-columns: 10px 1fr auto 12px;
+    gap: 12px; align-items: baseline;
+    padding: 14px 0;
+    border-top: 1px solid var(--rule);
+    position: relative;
+    cursor: pointer;
+    user-select: none;
+    transition: padding-left 220ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .cat-row:last-child { border-bottom: 1px solid var(--rule); }
+  .cat-row:hover { padding-left: 6px; }
+  .cat-row .dot {
+    width: 7px; height: 7px; border-radius: 99px;
+    justify-self: center; transform: translateY(-3px);
+    transition: transform 200ms;
+  }
+  .cat-row:hover .dot { transform: translateY(-3px) scale(1.4); }
+  .cat-row .name-block {
+    display: flex; flex-direction: column; gap: 4px; min-width: 0;
+  }
+  .cat-row .name {
+    font: 400 14px var(--font-mono); color: var(--ink);
+  }
+  .cat-row .name .count {
+    color: var(--ink-faint); margin-left: 6px; font-size: 11px;
+  }
+  .cat-row .bar-track {
+    position: relative; height: 1px; background: var(--rule);
+    margin-top: 6px;
+  }
+  .cat-row .bar-fill {
+    position: absolute; left: 0; top: -1.5px; height: 4px;
+    border-radius: 1px;
+    transform-origin: left center;
+    animation: ruleDraw 700ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
+  .cat-row .bar-fill.over { background: var(--over) !important; }
+  .cat-row .amt {
+    font: italic 400 17px var(--font-display);
+    color: var(--ink); font-feature-settings: 'tnum' 1;
+    text-align: right; white-space: nowrap;
+  }
+  .cat-row .amt .budget {
+    display: block;
+    font-size: 11px; color: var(--ink-faint);
+    font-style: italic;
+    margin-top: 2px;
+  }
+  .cat-row .amt .budget.over  { color: var(--over); }
+  .cat-row .amt .budget.under { color: var(--under); }
+  .cat-row .arrow {
+    color: var(--ink-faint);
+    font: 400 14px/1 var(--font-display);
+    align-self: center;
+    transition: transform 220ms cubic-bezier(0.22,1,0.36,1), color 200ms;
+  }
+  .cat-row:hover .arrow { transform: translateX(3px); color: var(--ink-soft); }
+
+  /* budgets-off: hide per-row progress bars and budget tail without re-rendering */
+  .budgets-off .cat-row .bar-track { display: none; }
+  .budgets-off .cat-row .amt .budget { display: none; }
+
+  /* tiny inline toggle for "show budgets" */
+  .toggle {
+    width: 32px; height: 18px; border-radius: 999px;
+    background: var(--rule);
+    border: 1px solid transparent;
+    cursor: pointer; padding: 1.5px;
+    position: relative; transition: background 240ms ease;
+    flex-shrink: 0;
+  }
+  .toggle.on { background: var(--ink); }
+  .toggle-knob {
+    width: 13px; height: 13px; border-radius: 99px;
+    background: var(--paper);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.2);
+    transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .toggle.on .toggle-knob { transform: translateX(13px); }
+  .toggle-mini-row {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 9px var(--font-mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-soft);
+  }
+
+  /* ============================================ */
+  /* CATEGORY DETAIL VIEW                         */
+  /* ============================================ */
+  .back-link {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 10px var(--font-mono); letter-spacing: 0.24em;
+    text-transform: uppercase; color: var(--ink-soft);
+    padding: 0; margin-bottom: 26px;
+    transition: color 150ms, transform 200ms;
+  }
+  .back-link:hover { color: var(--ink); transform: translateX(-2px); }
+
+  .cat-detail-head { margin-bottom: 28px; animation: riseGentle 380ms cubic-bezier(0.22,1,0.36,1); }
+  .cat-detail-kicker {
+    display: inline-flex; align-items: center; gap: 8px;
+    font: italic 400 14px var(--font-display);
+    color: var(--ink-soft); margin-bottom: 4px;
+  }
+  .cat-detail-kicker .swatch {
+    width: 8px; height: 8px; border-radius: 99px;
+  }
+  .cat-detail-headline {
+    font: 400 48px/0.95 var(--font-display);
+    letter-spacing: -0.015em; color: var(--ink);
+  }
+  .cat-budget-line {
+    margin-top: 10px;
+    font: italic 400 14px/1.5 var(--font-display);
+    color: var(--ink-soft);
+    animation: riseGentle 420ms 60ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
+  .cat-budget-line .delta {
+    font-style: italic; color: var(--ink);
+    font-feature-settings: 'tnum' 1;
+  }
+  .cat-budget-line .delta.over  { color: var(--over); }
+  .cat-budget-line .delta.under { color: var(--under); }
+  .cat-detail-stats {
+    display: grid; grid-template-columns: 1fr 1fr 1fr;
+    border-top: 1px solid var(--rule);
+    border-bottom: 1px solid var(--rule);
+    margin-bottom: 30px;
+    animation: riseGentle 420ms 80ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
+  .cat-detail-stats .cell { padding: 12px 12px 12px 0; }
+  .cat-detail-stats .cell + .cell {
+    padding-left: 12px; border-left: 1px solid var(--rule);
+  }
+  .cat-detail-stats .lbl {
+    font: 500 9px var(--font-mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 6px;
+  }
+  .cat-detail-stats .val {
+    font: 400 22px/1 var(--font-display);
+    font-feature-settings: 'tnum' 1;
+  }
+  .cat-detail-stats .sub {
+    font: italic 400 11px var(--font-display);
+    color: var(--ink-faint); margin-top: 4px;
+  }
+
+  /* ============================================ */
+  /* SETTINGS                                     */
+  /* ============================================ */
+  .settings-head { margin-bottom: 32px; animation: riseGentle 380ms cubic-bezier(0.22,1,0.36,1); }
+  .settings-kicker {
+    font: italic 400 14px var(--font-display);
+    color: var(--ink-soft); margin-bottom: 6px;
+  }
+  .settings-headline {
+    font: 400 44px/0.98 var(--font-display);
+    letter-spacing: -0.015em;
+  }
+  .set-section {
+    margin-bottom: 32px;
+    animation: riseGentle 420ms 80ms cubic-bezier(0.22,1,0.36,1) backwards;
+  }
   .set-section .head {
     font: 500 10px var(--font-mono); letter-spacing: 0.24em;
-    color: var(--ink-soft); margin-bottom: 14px; text-transform: uppercase;
+    text-transform: uppercase; color: var(--ink-soft);
+    margin-bottom: 12px;
   }
   .set-row {
     display: grid; grid-template-columns: 1fr auto;
     gap: 14px; align-items: center;
     padding: 14px 0; border-top: 1px solid var(--rule);
   }
-  .set-row .title { font: 400 16px var(--font-sans); color: var(--ink); margin-bottom: 4px; }
-  .set-row .desc  { font: italic 400 14px/1.4 var(--font-display); color: var(--ink-soft); }
-  .set-row .cap-input { display: flex; align-items: baseline; gap: 4px; }
-  .set-row .cap-input span { font: italic 400 14px var(--font-display); color: var(--ink-soft); }
-  .set-row .cap-input input {
-    width: 90px; font: italic 400 22px var(--font-display); text-align: right;
-    background: transparent; border: none; border-bottom: 1px solid var(--rule);
-    padding: 2px 0; color: var(--ink);
+  .set-row:last-child { border-bottom: 1px solid var(--rule); }
+  .set-row .title { font: 400 15px var(--font-mono); color: var(--ink); margin-bottom: 4px; }
+  .set-row .desc { font: italic 400 13px/1.4 var(--font-display); color: var(--ink-soft); }
+  .set-row .toggle-big {
+    width: 38px; height: 22px;
   }
+  .set-row .toggle-big .toggle-knob { width: 16px; height: 16px; }
+  .set-row .toggle-big.on .toggle-knob { transform: translateX(16px); }
 
-  /* Toggle switch */
-  .toggle {
-    width: 36px; height: 20px; border-radius: 999px;
-    background: var(--rule); border: none; cursor: pointer; padding: 2px;
-    position: relative; transition: background 200ms ease;
+  .set-cat-row {
+    display: grid; grid-template-columns: 16px 1fr 36px;
+    gap: 12px; align-items: center;
+    padding: 12px 0; border-top: 1px solid var(--rule);
   }
-  .toggle.on { background: var(--ink); }
-  .toggle-knob {
-    width: 14px; height: 14px; border-radius: 99px; background: var(--bg);
-    transition: transform 200ms cubic-bezier(0.22,1,0.36,1);
+  .set-cat-row:last-child { border-bottom: 1px solid var(--rule); }
+  .set-cat-row.disabled { opacity: 0.4; }
+  .set-cat-row .swatch {
+    width: 12px; height: 12px; border-radius: 99px;
+    border: 1px solid rgba(0,0,0,0.06);
+    transition: transform 200ms;
   }
-  .toggle.on .toggle-knob { transform: translateX(16px); }
+  .set-cat-row .swatch:hover { transform: scale(1.2); }
+  .set-cat-row .label-input {
+    font: 400 14px var(--font-mono); color: var(--ink);
+    background: transparent; border: none; outline: none;
+    padding: 4px 0; width: 100%;
+    border-bottom: 1px solid transparent;
+    transition: border-color 150ms;
+  }
+  .set-cat-row .label-input:focus { border-bottom-color: var(--rule); }
+  .set-cat-row .toggle { width: 32px; height: 18px; }
 
-  /* Category rows */
-  .cat-row-edit {
-    display: grid; grid-template-columns: 20px 1fr 100px 56px 24px;
-    gap: 14px; align-items: center;
-    padding: 14px 0; border-top: 1px solid var(--rule);
-    transition: opacity 150ms ease;
+  /* reusable inline budget input (used on cat-detail) */
+  .budget-input {
+    display: inline-flex; align-items: baseline; gap: 3px;
   }
-  .cat-row-edit.disabled { opacity: 0.55; }
-  .color-swatch-wrap { position: relative; }
-  .color-swatch {
-    width: 14px; height: 14px; border-radius: 99px;
-    border: 1px solid rgba(0,0,0,0.1); cursor: pointer; padding: 0;
+  .budget-input span {
+    font: italic 400 13px var(--font-display); color: var(--ink-soft);
   }
-  .color-popover {
-    position: absolute; top: 22px; left: -4px; z-index: 5;
-    background: var(--bg); border: 1px solid var(--rule); padding: 8px;
-    display: grid; grid-template-columns: repeat(5, 18px); gap: 6px;
-    box-shadow: 0 8px 22px rgba(0,0,0,0.12);
+  .budget-input input {
+    width: 64px; font: italic 400 18px var(--font-display);
+    background: transparent; border: none;
+    border-bottom: 1px dashed var(--rule-strong);
+    padding: 1px 2px; color: var(--ink); outline: none;
+    font-feature-settings: 'tnum' 1;
+    transition: border-color 200ms, background 200ms;
   }
-  .color-popover button {
-    width: 18px; height: 18px; border-radius: 99px;
-    border: 1px solid rgba(0,0,0,0.1); cursor: pointer; padding: 0;
+  .budget-input input:focus {
+    border-bottom-color: var(--ink); border-bottom-style: solid;
   }
-  .color-popover button.active { border: 2px solid var(--ink); }
-  .cat-row-edit .label-input {
-    font: 400 15px var(--font-sans); color: var(--ink);
-    background: transparent; border: none; outline: none; padding: 4px 0;
-    width: 100%;
-  }
-  .cat-row-edit .budget-input {
-    display: flex; align-items: baseline; gap: 4px; justify-content: flex-end;
-  }
-  .cat-row-edit .budget-input span { font: italic 400 14px var(--font-display); color: var(--ink-soft); }
-  .cat-row-edit .budget-input input {
-    width: 70px; font: italic 400 22px var(--font-display); text-align: right;
-    background: transparent; border: none; border-bottom: 1px solid var(--rule);
-    outline: none; padding: 2px 0; color: var(--ink);
-  }
-  .cat-row-edit .row-del {
-    background: transparent; border: none; color: var(--ink-soft);
-    font-size: 18px; cursor: pointer; padding: 4px;
-    transition: color 150ms ease;
-  }
-  .cat-row-edit .row-del:hover { color: var(--over); }
+  .budget-input input::-webkit-outer-spin-button,
+  .budget-input input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
 
-  .cat-add-row {
-    display: grid; grid-template-columns: 1fr auto;
-    gap: 12px; padding: 14px 0;
-    border-top: 1px dotted var(--rule); align-items: center; margin-top: 6px;
+  /* settings: name input row */
+  .set-row.set-row-input {
+    grid-template-columns: 1fr; align-items: stretch; gap: 0;
+    padding: 14px 0;
   }
-  .cat-add-row input {
-    font: 400 15px var(--font-sans); color: var(--ink);
-    background: transparent; border: none; border-bottom: 1px solid var(--rule);
+  .name-input {
+    margin-top: 12px;
+    font: italic 400 22px var(--font-display); color: var(--ink);
+    background: transparent; border: none;
+    border-bottom: 1px solid var(--rule);
     padding: 6px 0; outline: none; width: 100%;
+    transition: border-color 200ms;
   }
-  .cat-add-btn {
-    background: transparent; color: var(--ink-soft);
-    border: 1px solid var(--rule); cursor: pointer;
-    font: 500 10px var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;
-    padding: 8px 14px; border-radius: 999px;
-    transition: all 150ms ease; white-space: nowrap;
-  }
-  .cat-add-btn.ready { background: var(--ink); color: var(--bg); border-color: var(--ink); cursor: pointer; }
+  .name-input:focus { border-bottom-color: var(--ink); }
+  .name-input::placeholder { color: var(--ink-faint); font-style: italic; }
 
-  /* Closed days */
-  .closed-explainer {
-    font: italic 400 15px/1.5 var(--font-display); color: var(--ink-soft);
-    margin-bottom: 14px; max-width: 520px;
+  /* ============================================ */
+  /* FAB                                          */
+  /* ============================================ */
+  .fab-wrap {
+    position: fixed; left: 0; right: 0; bottom: 0;
+    display: flex; justify-content: center; pointer-events: none;
+    padding: 0 0 24px; z-index: 30;
   }
-  .closed-chips { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 14px; }
-  .closed-chip {
+  .fab-pill {
+    pointer-events: auto;
+    display: inline-flex; align-items: center; gap: 10px;
+    background: var(--ink); color: var(--bg);
+    font: 500 10px var(--font-mono); letter-spacing: 0.26em;
+    text-transform: uppercase;
+    padding: 13px 22px; border-radius: 999px;
+    box-shadow: 0 12px 28px -10px rgba(28,24,18,0.35),
+                0 4px 10px -3px rgba(28,24,18,0.18);
+    transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    animation: rise 460ms 200ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
+  }
+  .fab-pill:hover { transform: translateY(-2px); }
+  .fab-pill:active { transform: translateY(1px) scale(0.96); }
+  .fab-pill .plus {
+    font-size: 14px; line-height: 1; font-weight: 300;
+    transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .fab-pill:hover .plus { transform: rotate(90deg); }
+
+  /* ============================================ */
+  /* MODAL                                        */
+  /* ============================================ */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(28,24,18,0.22);
+    backdrop-filter: blur(6px) saturate(110%);
+    -webkit-backdrop-filter: blur(6px) saturate(110%);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 100; animation: fadeIn 240ms ease;
+  }
+  .palette-night .modal-backdrop { background: rgba(0,0,0,0.5); }
+  .modal {
+    background: var(--paper);
+    border-top: 1px solid var(--rule-strong);
+    border-left: 1px solid var(--rule-strong);
+    border-right: 1px solid var(--rule-strong);
+    color: var(--ink);
+    width: 100%; max-width: 480px;
+    padding: 26px 24px 22px;
+    border-radius: 16px 16px 0 0;
+    box-shadow: 0 -20px 60px rgba(28,24,18,0.18);
+    animation: rise 320ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .modal::before {
+    content: ''; display: block;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--rule-strong);
+    margin: -10px auto 16px;
+  }
+  .modal-kicker {
+    font: 500 10px var(--font-mono); letter-spacing: 0.26em;
+    color: var(--ink-soft); text-transform: uppercase;
+    margin-bottom: 14px;
+  }
+  .amount-input-wrap {
+    display: flex; align-items: baseline; gap: 6px;
+    margin-bottom: 20px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--rule);
+  }
+  .amount-input-wrap .currency {
+    font: 300 28px/1 var(--font-display); color: var(--ink-soft);
+  }
+  .amount-input-wrap input {
+    flex: 1; font: 300 48px/1 var(--font-display);
+    letter-spacing: -0.03em; color: var(--ink);
+    background: transparent; border: none; padding: 0;
+    font-feature-settings: 'tnum' 1; min-width: 0;
+  }
+  .amount-input-wrap input::-webkit-outer-spin-button,
+  .amount-input-wrap input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .field-label {
+    font: 500 9px var(--font-mono); letter-spacing: 0.22em;
+    color: var(--ink-soft); text-transform: uppercase;
+    margin-bottom: 8px;
+  }
+  .cat-chips {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin-bottom: 20px;
+  }
+  .cat-chip {
     display: inline-flex; align-items: center; gap: 6px;
-    background: transparent; border: 1px solid var(--rule);
-    color: var(--ink); cursor: pointer;
-    font: 500 10px var(--font-mono); letter-spacing: 0.18em;
-    padding: 6px 10px; border-radius: 999px; text-transform: uppercase;
+    padding: 7px 11px; border-radius: 999px;
+    color: var(--ink-soft); font: 400 12px var(--font-mono);
+    border: 1px solid var(--rule);
+    transition: all 200ms ease;
   }
-  .closed-chip:hover { border-color: var(--ink); }
-  .closed-chip span.x { color: var(--ink-soft); }
-  .close-gaps-btn {
-    background: transparent; border: 1px solid var(--ink);
-    color: var(--ink); cursor: pointer;
-    font: 500 10px var(--font-mono); letter-spacing: 0.2em; text-transform: uppercase;
-    padding: 10px 16px; border-radius: 999px;
+  .cat-chip:active { transform: scale(0.95); }
+  .cat-chip.active { color: var(--ink); border-color: var(--ink); }
+  .chip-dot { width: 6px; height: 6px; border-radius: 99px; }
+  .note-day-row {
+    display: grid; grid-template-columns: 1fr 80px;
+    gap: 12px; margin-bottom: 20px;
   }
-  .close-gaps-btn:hover { background: var(--ink); color: var(--bg); }
-  .closed-empty { font: italic 400 14px var(--font-display); color: var(--ink-soft); }
+  .note-day-row input {
+    width: 100%; font: 400 14px var(--font-mono); color: var(--ink);
+    background: transparent; border: none;
+    border-bottom: 1px solid var(--rule);
+    padding: 6px 0; outline: none;
+    transition: border-color 200ms;
+  }
+  .note-day-row input:focus { border-bottom-color: var(--ink); }
+  .modal-actions {
+    display: flex; justify-content: space-between; align-items: center; gap: 4px;
+    padding-top: 4px;
+  }
+  .modal-actions .right { display: flex; gap: 4px; align-items: center; margin-left: auto; }
+  .btn-delete {
+    color: var(--ink-soft);
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 12px 4px;
+    border-bottom: 1px solid transparent;
+    transition: color 150ms, border-color 150ms;
+  }
+  .btn-delete:active { color: var(--over); border-bottom-color: var(--over); }
+  .btn-cancel {
+    color: var(--ink-soft);
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 12px 16px;
+  }
+  .btn-add {
+    background: var(--ink); color: var(--bg);
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 13px 20px; border-radius: 2px;
+    transition: transform 180ms;
+  }
+  .btn-add:active { transform: scale(0.96); }
+  .btn-add:disabled { opacity: 0.35; }
 
-  /* ---------- Mobile (≤ 700px) ---------- */
-  @media (max-width: 700px) {
-    .shell {
-      grid-template-columns: 1fr;
-      gap: 28px;
-      padding: 38px 22px 140px;
+  /* ---------- desktop tweaks ---------- */
+  @media (min-width: 720px) {
+    .topbar { padding: 18px 36px 14px; }
+    .shell { max-width: 580px; padding: 36px 36px 160px; }
+    .day-header .day-num { font-size: 44px; }
+    .figure-amount { font-size: 124px; }
+    .month-headline { font-size: 60px; }
+    .month-stats .val { font: 400 30px/1 var(--font-display); }
+    .cal-cell .cell-num { font-size: 11px; }
+    .cal-cell .cell-amt { font-size: 13px; }
+    .cal-cell .cell-btn { padding: 8px 7px 7px; }
+    .chart-svg { height: 180px; }
+    .modal {
+      max-width: 460px;
+      border-radius: 4px;
+      border: 1px solid var(--rule-strong);
+      padding: 32px 36px 28px;
     }
-    .left-head { margin-bottom: 18px; }
-    .day-headline { font-size: 38px; }
-    .day-of-week { margin-bottom: 6px; font-size: 13px; }
-    .today-label { margin-top: 16px; }
-    .amount-big { font-size: 48px; line-height: 0.95; }
-    .amount-big .currency { font-size: 0.38em; }
-    .right { gap: 24px; padding-top: 0; }
-    .by-cat-grid { grid-template-columns: 110px 1fr; gap: 16px; }
-    .cat-list { gap: 6px; }
-    .cat-row .cat-name { font-size: 12px; }
-    .cat-row .cat-amt { font-size: 16px; }
-    .cal-grid { gap: 3px; }
-    .cal-dow { gap: 3px; }
-    .cal-cell .cell-btn { padding: 4px; }
-    .cal-cell .cell-num { font-size: 9px; }
-    .cal-cell .cell-amt { font-size: 11px; }
-    .pacing-msg { font-size: 14px; margin-bottom: 20px; }
-    .rail-meta { font-size: 9px; letter-spacing: 0.18em; }
-    .modal { padding: 24px 22px 20px; }
-    .modal .amount-input-wrap input { font-size: 36px; }
-    .fab-wrap { padding: 32px 0 18px; padding-bottom: calc(18px + env(safe-area-inset-bottom)); }
-    .fab-pill { font-size: 10px; padding: 12px 22px; }
-    .left { order: 1; }
-    .right { order: 2; }
-
-    .settings { padding: 36px 22px 80px; }
-    .set-headline { font-size: 38px; margin-bottom: 28px; }
-    .set-stat-strip { grid-template-columns: 1fr 1fr; }
-    .set-stat:nth-child(3) { display: none; }
-    .set-stat:nth-child(2) { border-right: none; }
-    .set-stat { padding: 14px 16px; }
-    .set-stat .val { font-size: 26px; }
-    .cat-row-edit { grid-template-columns: 20px 1fr 80px 36px; }
-    .cat-row-edit .row-del { display: none; }
-    .cat-row-edit .budget-input input { width: 50px; font-size: 18px; }
-  }
-
-  /* Touch devices: hide hover-only affordances since they can't be reached */
-  @media (hover: none) {
-    .day-row .x { opacity: 0.45; }
-    .cal-cell .cell-toggle { display: none; }
+    .modal::before { display: none; }
+    .modal-backdrop { align-items: center; }
   }
 </style>
 </head>
-<body class="palette-warm">
-
+<body>
 <div id="app"></div>
 
 <script>
-'use strict';
-
-// =============================================================
-// Constants & seed data (ported from data.jsx + store.jsx)
-// =============================================================
-
-const STORAGE_KEY = 'lumen.v1';
-const LEGACY_KEY  = 'ledger.v1';
-
-const CATEGORIES_INIT = [
-  { key: 'groceries', label: 'Groceries', color: '#7d8a4a', budget: 280, enabled: true },
-  { key: 'food',      label: 'Food',      color: '#9b3c3c', budget: 220, enabled: true },
-  { key: 'gas',       label: 'Gas',       color: '#5b6b85', budget: 160, enabled: true },
-  { key: 'shopping',  label: 'Shopping',  color: '#7a4a6b', budget: 160, enabled: true },
-  { key: 'other',     label: 'Other',     color: '#b8853a', budget:  80, enabled: true },
-];
-
-// Color pool used when adding new categories — first unused wins.
-const PALETTE_POOL = [
-  '#7d8a4a', '#9b3c3c', '#5b6b85', '#7a4a6b', '#b8853a',
-  '#3f6b62', '#a8632b', '#4f5a78', '#8a5a8a', '#5a7a4d',
-];
-
-const SEED_EXPENSES = [
-  { id: 'e1',  day: 5,  cat: 'groceries', label: 'Whole Foods',     amount: 65 },
-  { id: 'e2',  day: 5,  cat: 'food',      label: 'Brunch — cafe',   amount: 10 },
-  { id: 'e3',  day: 8,  cat: 'shopping',  label: 'Bookstore',       amount: 25 },
-  { id: 'e4',  day: 12, cat: 'other',     label: 'Pharmacy',        amount: 8  },
-  { id: 'e5',  day: 12, cat: 'gas',       label: 'Shell station',   amount: 22 },
-  { id: 'e6',  day: 15, cat: 'groceries', label: 'Trader Joe’s',    amount: 30 },
-  { id: 'e7',  day: 15, cat: 'food',      label: 'Dinner — Lupa',   amount: 20 },
-  { id: 'e8',  day: 20, cat: 'gas',       label: 'BP',              amount: 38 },
-  { id: 'e9',  day: 20, cat: 'food',      label: 'Lunch — sushi',   amount: 22 },
-  { id: 'e10', day: 23, cat: 'food',      label: 'Coffee + pastry', amount: 14 },
-  { id: 'e11', day: 27, cat: 'food',      label: 'Coffee + bagel',  amount: 15 },
-  { id: 'e12', day: 27, cat: 'shopping',  label: 'Shoes',           amount: 32 },
-];
-
-const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
-const DOW_SHORT   = ['S','M','T','W','T','F','S'];
-const DOW_FULL    = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
-const DOW_3       = ['SUN','MON','TUE','WED','THU','FRI','SAT'];
-
-// Real "today" — the date the user is opening the app. Used for the
-// pulsing dot, pace math, and the JUMP TO TODAY button.
-function realToday() {
-  const d = new Date();
-  return { year: d.getFullYear(), month: d.getMonth(), day: d.getDate() };
-}
-const TODAY = realToday();
-
-// =============================================================
-// Pure helpers
-// =============================================================
-
-function fmtMoney(n) { if (n == null) return ''; return `$${Math.round(n).toLocaleString('en-US')}`; }
-function daysInMonth(y, m) { return new Date(y, m + 1, 0).getDate(); }
-function firstDayOfMonth(y, m) { return new Date(y, m, 1).getDay(); }
-
-function expensesByDay(expenses, enabledKeys) {
-  const byDay = {};
-  for (const e of expenses) {
-    if (enabledKeys && !enabledKeys.has(e.cat)) continue;
-    (byDay[e.day] ||= []).push(e);
-  }
-  return byDay;
-}
-
-function totalsByCategory(expenses, categories) {
-  const enabled = categories.filter(c => c.enabled);
-  const totals  = Object.fromEntries(enabled.map(c => [c.key, 0]));
-  for (const e of expenses) if (totals[e.cat] != null) totals[e.cat] += e.amount;
-  const total = Object.values(totals).reduce((a, b) => a + b, 0);
-  return enabled.map(c => ({
-    ...c,
-    amount: totals[c.key] || 0,
-    pct: total ? (totals[c.key] || 0) / total : 0,
-  }));
-}
-
-function dominantCatForDay(dayExp, byKey) {
-  if (!dayExp?.length) return null;
-  const acc = {};
-  for (const e of dayExp) acc[e.cat] = (acc[e.cat] || 0) + e.amount;
-  let best = null, bestAmt = -1;
-  for (const [k, v] of Object.entries(acc)) if (v > bestAmt) { best = k; bestAmt = v; }
-  return byKey[best];
-}
-
-function buildCells(year, month) {
-  const dim   = daysInMonth(year, month);
-  const first = firstDayOfMonth(year, month);
-  const cells = [];
-  for (let i = 0; i < first; i++) cells.push(null);
-  for (let d = 1; d <= dim; d++) cells.push(d);
-  while (cells.length < 42) cells.push(null);
-  while (cells.length > 35 && cells.slice(-7).every(c => c === null)) cells.length -= 7;
-  return cells;
-}
-
-function pacingMessage(spent, expected, effBudget, totalBudget, closedCount) {
-  if (closedCount > 0 && spent < expected) {
-    return `Closed ${closedCount} day${closedCount === 1 ? '' : 's'}. Budget recalibrated to ${fmtMoney(effBudget)}.`;
-  }
-  if (spent > expected) return `Over by ${fmtMoney(spent - expected)} this month, but still on pace overall.`;
-  if (spent < expected * 0.85) return `Under pace by ${fmtMoney(expected - spent)} — a quiet month.`;
-  return `Tracking steady against ${fmtMoney(effBudget)} budget.`;
-}
-
-// =============================================================
-// State + persistence
-// =============================================================
-
-function defaultState() {
-  return {
-    expenses: SEED_EXPENSES.slice(),
-    categories: CATEGORIES_INIT.map(c => ({ ...c })),
-    closedDays: [],
-    year: TODAY.year,
-    month: TODAY.month,
-    selectedDay: TODAY.day,
-    budgetsEnabled: true,
-    monthlyCap: 900,
-    darkMode: false,
-    route: 'dashboard', // 'dashboard' | 'settings'
-  };
-}
-
-// One-time best-effort migration from the old Ledger PWA shape.
-// Old shape: entries[YYYY-MM-DD] = [{ amount, category, note, ts, ... }]
-// We map the *current month's* old entries into our flat day-of-month list.
-function migrateLegacy() {
-  try {
-    const raw = localStorage.getItem(LEGACY_KEY);
-    if (!raw) return null;
-    const old = JSON.parse(raw);
-    const s = defaultState();
-    s.expenses = [];
-    const prefix = `${TODAY.year}-${String(TODAY.month + 1).padStart(2, '0')}-`;
-    const knownCats = new Set(CATEGORIES_INIT.map(c => c.key));
-    Object.entries(old.entries || {}).forEach(([key, list]) => {
-      if (!key.startsWith(prefix)) return;
-      const day = parseInt(key.slice(8, 10), 10);
-      if (!day) return;
-      list.forEach((e, i) => {
-        s.expenses.push({
-          id: 'm' + key + i,
-          day,
-          cat: knownCats.has(e.category) ? e.category : 'other',
-          label: e.note || 'Expense',
-          amount: Number(e.amount) || 0,
-        });
-      });
-    });
-    if (typeof old.monthlyBudget === 'number') s.monthlyCap = old.monthlyBudget;
-    return s;
-  } catch { return null; }
-}
-
-function loadState() {
-  try {
-    const raw = localStorage.getItem(STORAGE_KEY);
-    if (raw) {
-      const parsed = JSON.parse(raw);
-      // Sanity: if expenses missing, fall through to default
-      if (Array.isArray(parsed.expenses) && Array.isArray(parsed.categories)) {
-        return { ...defaultState(), ...parsed };
+  // ============================================================
+  // h() — minimal createElement helper
+  // ============================================================
+  function h(tag, props, ...children) {
+    const el = document.createElement(tag);
+    if (props) {
+      for (const k in props) {
+        const v = props[k];
+        if (k === 'class') el.className = v;
+        else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+        else if (k.startsWith('on')) el.addEventListener(k.slice(2).toLowerCase(), v);
+        else if (k === 'innerHTML') el.innerHTML = v;
+        else if (v === false || v == null) {}
+        else if (v === true) el.setAttribute(k, '');
+        else el.setAttribute(k, v);
       }
     }
-    const migrated = migrateLegacy();
-    if (migrated) {
-      // Don't delete the old key — leave it as a rollback breadcrumb.
-      return migrated;
+    for (const c of children.flat()) {
+      if (c == null || c === false) continue;
+      el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
     }
-  } catch {}
-  return defaultState();
-}
+    return el;
+  }
 
-function saveState() {
-  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state)); } catch {}
-}
+  // ============================================================
+  // STATE
+  // ============================================================
+  const TODAY = { year: 2026, month: 3, day: 27 };
+  const MONTH_NAMES = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const DOW_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const DOW_SHORT = ['S','M','T','W','T','F','S'];
 
-const state = loadState();
+  function ord(n) {
+    const s = ['th','st','nd','rd'], v = n % 100;
+    return s[(v - 20) % 10] || s[v] || s[0];
+  }
 
-// =============================================================
-// Derived view-model (recomputed each render)
-// =============================================================
-
-function derive() {
-  const enabledKeys = new Set(state.categories.filter(c => c.enabled).map(c => c.key));
-  const visibleExp  = state.expenses.filter(e => enabledKeys.has(e.cat));
-  const byDay       = expensesByDay(state.expenses, enabledKeys);
-  const totals      = totalsByCategory(state.expenses, state.categories);
-  const monthTotal  = totals.reduce((a, b) => a + b.amount, 0);
-  const sumOfCats   = state.categories.filter(c => c.enabled).reduce((a, b) => a + (b.budget || 0), 0);
-  const totalBudget = state.budgetsEnabled ? sumOfCats : (state.monthlyCap || 0);
-  const dim         = daysInMonth(state.year, state.month);
-  const dayRate     = totalBudget / dim;
-  const effBudget   = totalBudget - dayRate * state.closedDays.length;
-
-  // Pacing only applies when viewing the current month; future/past months
-  // show "tracked days = dim" so the bar reads as "the whole month".
-  const isCurrentMonth = state.year === TODAY.year && state.month === TODAY.month;
-  const refDay = isCurrentMonth ? TODAY.day : dim;
-  const trackedDays   = refDay - state.closedDays.filter(d => d <= refDay).length;
-  const expectedSoFar = dayRate * Math.max(0, trackedDays);
-
-  const selDayExp     = byDay[state.selectedDay] || [];
-  const selDayTotal   = selDayExp.reduce((a, b) => a + b.amount, 0);
-  const monthDelta    = monthTotal - expectedSoFar;
-  const catByKey      = Object.fromEntries(state.categories.map(c => [c.key, c]));
-
-  return {
-    enabledKeys, visibleExp, byDay, totals, monthTotal, totalBudget,
-    effBudget, dim, dayRate, expectedSoFar, trackedDays, monthDelta,
-    selDayExp, selDayTotal, catByKey, isCurrentMonth, refDay,
+  const state = {
+    route: 'daily',
+    year: TODAY.year, month: TODAY.month, selectedDay: TODAY.day,
+    darkMode: false,
+    monthlyBudget: 1800,
+    budgetsEnabled: true,           // toggle: per-category budgets w/ progress bars
+    viewCat: null,                   // for cat-detail view
+    userName: 'Marie',               // shown as a greeting on daily view
+    categories: [
+      { key: 'food',    label: 'Food',     color: '#c9824a', budget: 480, enabled: true },
+      { key: 'transit', label: 'Transit',  color: '#5e7a8c', budget: 220, enabled: true },
+      { key: 'goods',   label: 'Goods',    color: '#7a6b94', budget: 320, enabled: true },
+      { key: 'fun',     label: 'Fun',      color: '#a8556e', budget: 280, enabled: true },
+      { key: 'home',    label: 'Home',     color: '#5a7a4a', budget: 320, enabled: true },
+      { key: 'health',  label: 'Health',   color: '#8b7548', budget: 180, enabled: true },
+    ],
+    history: [62, 41, 88, 30, 55, 72, 87],
+    expenses: [
+      { id: 'e1', day: 27, cat: 'food',    label: 'morning espresso',     amount: 6 },
+      { id: 'e2', day: 27, cat: 'food',    label: 'tortelli, that place', amount: 38 },
+      { id: 'e3', day: 27, cat: 'goods',   label: 'notebook + ink',       amount: 24 },
+      { id: 'e4', day: 27, cat: 'transit', label: 'metro day pass',       amount: 12 },
+      { id: 'e5', day: 27, cat: 'fun',     label: 'film at the angelika', amount: 17 },
+      { id: 'e6',  day: 26, cat: 'food',    label: 'groceries',         amount: 54 },
+      { id: 'e7',  day: 26, cat: 'home',    label: 'lightbulb',         amount: 7 },
+      { id: 'e8',  day: 26, cat: 'transit', label: 'cab home',          amount: 11 },
+      { id: 'e9',  day: 25, cat: 'fun',     label: 'concert tix',       amount: 65 },
+      { id: 'e10', day: 25, cat: 'food',    label: 'dinner w/ Mara',    amount: 48 },
+      { id: 'e11', day: 24, cat: 'food',    label: 'lunch',             amount: 14 },
+      { id: 'e12', day: 24, cat: 'goods',   label: 'phone case',        amount: 22 },
+      { id: 'e13', day: 23, cat: 'food',    label: 'coffee',            amount: 5 },
+      { id: 'e14', day: 22, cat: 'food',    label: 'groceries',         amount: 62 },
+      { id: 'e15', day: 22, cat: 'home',    label: 'cleaning supplies', amount: 18 },
+      { id: 'e16', day: 21, cat: 'health',  label: 'pharmacy',          amount: 28 },
+      { id: 'e17', day: 20, cat: 'food',    label: 'lunch',             amount: 16 },
+      { id: 'e18', day: 19, cat: 'transit', label: 'gas',               amount: 42 },
+      { id: 'e19', day: 18, cat: 'food',    label: 'groceries',         amount: 71 },
+      { id: 'e20', day: 17, cat: 'fun',     label: 'books',             amount: 34 },
+      { id: 'e21', day: 16, cat: 'food',    label: 'takeout',           amount: 26 },
+      { id: 'e22', day: 14, cat: 'food',    label: 'coffee + pastry',   amount: 9 },
+      { id: 'e23', day: 14, cat: 'goods',   label: 'tshirt',            amount: 32 },
+      { id: 'e24', day: 12, cat: 'food',    label: 'groceries',         amount: 58 },
+      { id: 'e25', day: 10, cat: 'health',  label: 'gym',               amount: 45 },
+      { id: 'e26', day: 8,  cat: 'food',    label: 'dinner',            amount: 37 },
+      { id: 'e27', day: 5,  cat: 'home',    label: 'plant',             amount: 24 },
+      { id: 'e28', day: 3,  cat: 'food',    label: 'groceries',         amount: 67 },
+      { id: 'e29', day: 1,  cat: 'fun',     label: 'museum',            amount: 22 },
+    ],
+    closedDays: [],
   };
-}
 
-// =============================================================
-// Local UI state (lives outside the persisted store)
-// =============================================================
-
-const ui = {
-  modalOpen: false,
-  modalDay: TODAY.day,
-  modalAmount: '',
-  modalCat: 'food',
-  modalLabel: '',
-  ghostId: null,
-  editingDayRowId: null,
-  openColorPickerKey: null,
-  newCatName: '',
-};
-
-// =============================================================
-// DOM helpers (tiny — no framework)
-// =============================================================
-
-function h(tag, attrs = {}, ...children) {
-  const el = document.createElement(tag);
-  for (const [k, v] of Object.entries(attrs)) {
-    if (v == null || v === false) continue;
-    if (k === 'class')        el.className = v;
-    else if (k === 'style')   Object.assign(el.style, v);
-    else if (k === 'dataset') Object.assign(el.dataset, v);
-    else if (k === 'html')    el.innerHTML = v;
-    else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2).toLowerCase(), v);
-    else if (k in el && typeof el[k] !== 'object') el[k] = v;
-    else el.setAttribute(k, v);
-  }
-  for (const c of children.flat()) {
-    if (c == null || c === false) continue;
-    el.appendChild(c instanceof Node ? c : document.createTextNode(String(c)));
-  }
-  return el;
-}
-
-// Animate the giant day amount on change. Stores last value on the element
-// so re-rendering doesn't re-trigger from-zero each time.
-function setAnimatedNumber(el, target, duration = 400) {
-  const from = parseFloat(el.dataset.value || '0');
-  el.dataset.value = String(target);
-  if (from === target) { el.textContent = String(Math.round(target)); return; }
-  const start = performance.now();
-  cancelAnimationFrame(+el.dataset.raf || 0);
-  const step = (t) => {
-    const k = Math.min(1, (t - start) / duration);
-    const eased = 1 - Math.pow(1 - k, 3);
-    const v = from + (target - from) * eased;
-    el.textContent = String(Math.round(v));
-    if (k < 1) el.dataset.raf = String(requestAnimationFrame(step));
+  const ui = {
+    modalOpen: false, modalEditId: null,
+    modalDay: TODAY.day, modalAmount: '', modalLabel: '', modalCat: 'food',
+    ghostId: null, scrolled: false,
+    prevHeroNum: 0,
   };
-  el.dataset.raf = String(requestAnimationFrame(step));
-}
 
-// =============================================================
-// Rendering — top level
-// =============================================================
+  // ============================================================
+  // DERIVED
+  // ============================================================
+  function dim(year, month) { return new Date(year, month + 1, 0).getDate(); }
 
-const root = document.getElementById('app');
+  function compute() {
+    const catByKey = Object.fromEntries(state.categories.map(c => [c.key, c]));
+    const byDay = {};
+    for (const e of state.expenses) (byDay[e.day] = byDay[e.day] || []).push(e);
 
-function render() {
-  const d = derive();
-  // Persist every render — cheap and avoids losing edits.
-  saveState();
+    const D = state.selectedDay;
+    const dayExp = byDay[D] || [];
+    const daySpent = dayExp.reduce((a, b) => a + b.amount, 0);
+    const dim_ = dim(state.year, state.month);
+    const dailyBudget = state.monthlyBudget / dim_;
+    const remaining = dailyBudget - daySpent;
+    const overToday = remaining < 0;
 
-  // Toggle dark palette on body so all CSS variables flip.
-  document.body.className = state.darkMode ? 'palette-night' : 'palette-warm';
-  document.querySelector('meta[name="theme-color"]')?.setAttribute('content',
-    state.darkMode ? '#1d1a14' : '#f5efe4');
+    const monthSpent = state.expenses.reduce((a, b) => a + b.amount, 0);
+    const isCurrentMonth = state.year === TODAY.year && state.month === TODAY.month;
+    const dayForPace = isCurrentMonth ? TODAY.day : dim_;
+    const expectedByNow = dailyBudget * dayForPace;
+    const pace = monthSpent - expectedByNow;
 
-  const topbar = renderTopbar();
-
-  if (state.route === 'settings') {
-    root.replaceChildren(topbar, renderSettings(d));
-    return;
-  }
-
-  const children = [
-    topbar,
-    h('div', { class: 'shell' },
-      renderLeft(d),
-      renderRight(d),
-    ),
-    h('div', { class: 'fab-wrap' },
-      h('button', { class: 'fab-pill', onClick: openAddModal },
-        h('span', { class: 'plus' }, '+'),
-        'Log expense',
-      ),
-    ),
-  ];
-  if (ui.modalOpen) children.push(renderModal(d));
-  root.replaceChildren(...children);
-}
-
-function renderTopbar() {
-  const onSettings = state.route === 'settings';
-  return h('div', { class: 'topbar' },
-    h('button', {
-      class: 'icon-btn',
-      title: state.darkMode ? 'Light mode' : 'Dark mode',
-      onClick: toggleDark,
-    }, sunMoonSvg(state.darkMode)),
-    h('button', {
-      class: 'icon-btn' + (onSettings ? ' active' : ''),
-      title: onSettings ? 'Close settings' : 'Settings',
-      onClick: () => setRoute(onSettings ? 'dashboard' : 'settings'),
-    }, gearSvg()),
-  );
-}
-
-// Sliders icon — three horizontal lines with knobs at varying positions.
-// Visually distinct from the sun/moon (which has a circle + rays).
-function gearSvg() {
-  const NS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('width', '18'); svg.setAttribute('height', '18');
-  svg.setAttribute('viewBox', '0 0 24 24'); svg.setAttribute('fill', 'none');
-  svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '1.4');
-  svg.setAttribute('stroke-linecap', 'round');
-  // Three rails
-  const rails = [
-    ['M3 6h18'], ['M3 12h18'], ['M3 18h18'],
-  ];
-  for (const [d] of rails) {
-    const p = document.createElementNS(NS, 'path');
-    p.setAttribute('d', d); svg.appendChild(p);
-  }
-  // Three knobs at staggered positions, filled to read as draggable handles
-  const knobs = [
-    [15, 6], [9, 12], [17, 18],
-  ];
-  for (const [cx, cy] of knobs) {
-    const c = document.createElementNS(NS, 'circle');
-    c.setAttribute('cx', String(cx)); c.setAttribute('cy', String(cy));
-    c.setAttribute('r', '2'); c.setAttribute('fill', 'var(--bg)');
-    svg.appendChild(c);
-  }
-  return svg;
-}
-
-// =============================================================
-// LEFT column
-// =============================================================
-
-function renderLeft(d) {
-  const isClosed = state.closedDays.includes(state.selectedDay);
-  const isToday  = d.isCurrentMonth && state.selectedDay === TODAY.day;
-  const dayLabel = DOW_FULL[new Date(state.year, state.month, state.selectedDay).getDay()];
-  const monthAbbr = MONTH_NAMES[state.month].slice(0, 3).toUpperCase();
-
-  return h('div', { class: 'left' },
-    h('div', { class: 'left-head' },
-      h('div', { class: 'month-tag' }, `${monthAbbr} · ${state.year}`),
-      !isToday && h('button', { class: 'jump-today', onClick: () => { Object.assign(state, { year: TODAY.year, month: TODAY.month, selectedDay: TODAY.day }); render(); } },
-        'Jump to today'),
-    ),
-
-    h('div', { class: 'day-of-week' }, dayLabel + (isClosed ? ' · CLOSED' : '')),
-    h('h1', { class: 'day-headline' }, `${MONTH_NAMES[state.month]} ${state.selectedDay}`),
-
-    h('div', { class: 'today-label' }, isToday ? 'Today' : 'This day'),
-    renderAmountBig(d.selDayTotal, isClosed),
-
-    renderDelta(d, isClosed),
-    renderDayRows(d, isClosed),
-    h('div', { class: 'pacing-msg' }, pacingMessage(d.monthTotal, d.expectedSoFar, d.effBudget, d.totalBudget, state.closedDays.length)),
-
-    h('div', { style: { flex: '1', minHeight: '8px' } }),
-    renderBudgetRail(d),
-  );
-}
-
-function renderAmountBig(total, isClosed) {
-  const wrap = h('div', { class: 'amount-big' + (isClosed ? ' closed' : '') },
-    h('span', { class: 'currency' }, '$'),
-    h('span', { class: 'num' }, '0'),
-  );
-  // Animate the number after it's in the DOM. We pull the existing
-  // dataset.value off the *previous* node by reading the current DOM.
-  const prevNum = root.querySelector('.amount-big .num');
-  if (prevNum) wrap.querySelector('.num').dataset.value = prevNum.dataset.value || '0';
-  setTimeout(() => setAnimatedNumber(wrap.querySelector('.num'), total), 0);
-  return wrap;
-}
-
-function renderDelta(d, isClosed) {
-  if (isClosed || d.dayRate <= 0) return h('div', { class: 'delta' }, '');
-  const over = d.selDayTotal > d.dayRate;
-  const txt = over
-    ? `Over daily by ${fmtMoney(d.selDayTotal - d.dayRate)} · Pace ${fmtMoney(d.dayRate)}/day`
-    : `${fmtMoney(d.dayRate - d.selDayTotal)} under daily · Pace ${fmtMoney(d.dayRate)}/day`;
-  return h('div', { class: 'delta' + (over ? ' over' : '') }, txt);
-}
-
-// Unified expenses list. The selected day is pinned at the top; all other
-// days in the month with expenses follow in reverse chronological order.
-// Clicking a row from another day re-pins that day at the top.
-function renderDayRows(d, isClosed) {
-  const wrap = h('div', { class: 'day-rows' });
-
-  // Pinned section: the selected day (always shown, even when empty).
-  wrap.appendChild(renderDaySection(state.selectedDay, d, { pinned: true, isClosed }));
-
-  // Group every *other* day's expenses (only days that actually have entries).
-  const otherDays = Object.keys(d.byDay)
-    .map(Number)
-    .filter(day => day !== state.selectedDay && (d.byDay[day]?.length > 0))
-    .sort((a, b) => b - a);
-
-  otherDays.forEach(day => {
-    wrap.appendChild(renderDaySection(day, d, { pinned: false, isClosed: state.closedDays.includes(day) }));
-  });
-
-  return wrap;
-}
-
-function renderDaySection(day, d, { pinned, isClosed }) {
-  const exp = d.byDay[day] || [];
-  const dow = DOW_3[new Date(state.year, state.month, day).getDay()];
-  const isToday = d.isCurrentMonth && day === TODAY.day;
-  const headerSuffix = pinned ? (isToday ? ' · TODAY' : ' · THIS DAY') : '';
-
-  const section = h('div', { class: 'day-section' + (pinned ? ' pinned' : '') });
-
-  // Section header (only for non-pinned days; pinned day's identity is in the headline above).
-  if (!pinned) {
-    section.appendChild(h('div', {
-      class: 'day-section-head',
-      onClick: () => { state.selectedDay = day; ui.editingDayRowId = null; render(); },
-    },
-      h('span', { class: 'mono-tight' }, `${dow} ${day}`),
-      isClosed && h('span', { class: 'mono-tight closed-tag' }, 'CLOSED'),
-    ));
-  } else {
-    // The pinned section gets a thin top rule, no header text (the hero already names it).
-    if (headerSuffix) {
-      // headerSuffix isn't rendered as text — kept for potential future use.
+    const byCatMonth = {};
+    for (const e of state.expenses) {
+      byCatMonth[e.cat] = byCatMonth[e.cat] || { amount: 0, count: 0 };
+      byCatMonth[e.cat].amount += e.amount;
+      byCatMonth[e.cat].count += 1;
     }
-  }
+    const catList = state.categories
+      .filter(c => byCatMonth[c.key])
+      .map(c => ({ ...c, ...byCatMonth[c.key] }))
+      .sort((a, b) => b.amount - a.amount);
 
-  if (exp.length === 0) {
-    // Only the pinned day can be empty here.
-    section.appendChild(h('div', { class: 'day-empty' },
-      h('span', {}, isClosed ? 'Day closed — skipped from pacing.' : 'Nothing logged this day.'),
-      h('button', { class: 'pill' + (isClosed ? ' active' : ''), onClick: toggleClosedDay },
-        isClosed ? 'Reopen' : 'Close day'),
-    ));
-    return section;
-  }
-
-  exp.forEach(e => section.appendChild(renderDayRow(e, d, { pinned, day })));
-
-  // Close-day pill is only on the pinned section.
-  if (pinned) {
-    section.appendChild(h('div', { class: 'close-day-row' },
-      h('button', { class: 'pill' + (isClosed ? ' active' : ''), onClick: toggleClosedDay },
-        isClosed ? 'Reopen' : 'Close day'),
-    ));
-  }
-
-  return section;
-}
-
-function renderDayRow(e, d, opts = {}) {
-  const cat = d.catByKey[e.cat] || state.categories[0];
-  // Edit-on-click only for the pinned day. Rows from other days first jump to
-  // that day; click again (now pinned) to enter edit mode.
-  const isPinned = opts.pinned !== false;
-  const editing = isPinned && ui.editingDayRowId === e.id;
-  const ghost = e.id === ui.ghostId;
-
-  if (editing) {
-    const draft = { amount: e.amount, label: e.label, cat: e.cat };
-    const save = () => {
-      Object.assign(e, draft, { amount: parseFloat(draft.amount) || e.amount });
-      ui.editingDayRowId = null;
-      render();
+    return {
+      catByKey, byDay, dim: dim_,
+      dayExp, daySpent, dailyBudget, remaining, overToday,
+      monthSpent, pace, isCurrentMonth, dayForPace,
+      catList,
+      isToday: state.selectedDay === TODAY.day && isCurrentMonth,
     };
-    const cancel = () => { ui.editingDayRowId = null; render(); };
-    return h('div', { class: 'day-row editing' },
-      h('select', {
-        onChange: (ev) => { draft.cat = ev.target.value; },
-      }, ...state.categories.filter(c => c.enabled).map(c =>
-        h('option', { value: c.key, selected: c.key === e.cat }, c.label.toUpperCase()),
-      )),
-      h('input', {
-        type: 'text', value: draft.label, autofocus: true,
-        onInput: (ev) => { draft.label = ev.target.value; },
-        onKeydown: (ev) => { if (ev.key === 'Enter') save(); if (ev.key === 'Escape') cancel(); },
-      }),
-      h('div', { class: 'amt-edit' },
-        h('span', { class: 'currency-sm' }, '$'),
-        h('input', {
-          type: 'number', value: String(draft.amount), step: '0.01',
-          onInput: (ev) => { draft.amount = ev.target.value; },
-          onKeydown: (ev) => { if (ev.key === 'Enter') save(); if (ev.key === 'Escape') cancel(); },
-          onBlur: save,
-        }),
+  }
+
+  // ============================================================
+  // RENDER ROOT
+  // ============================================================
+  function render() {
+    document.body.classList.toggle('palette-night', state.darkMode);
+    document.body.classList.toggle('budgets-off', !state.budgetsEnabled);
+    const root = document.getElementById('app');
+    root.innerHTML = '';
+    const d = compute();
+    root.appendChild(renderTopbar());
+    if (state.route === 'daily') root.appendChild(renderDaily(d));
+    else if (state.route === 'monthly') root.appendChild(renderMonthly(d));
+    else if (state.route === 'cat-detail') root.appendChild(renderCatDetail(d));
+    else if (state.route === 'settings') root.appendChild(renderSettings(d));
+    if (state.route !== 'settings') root.appendChild(renderFab());
+    if (ui.modalOpen) root.appendChild(renderModal(d));
+  }
+
+  function renderTopbar() {
+    const showViewToggle = state.route === 'daily' || state.route === 'monthly';
+    return h('header', { class: 'topbar' + (ui.scrolled ? ' scrolled' : '') },
+      h('button', { class: 'brand', onClick: () => { state.route = 'daily'; render(); } },
+        h('span', { class: 'dot' }), 'Lumen'),
+      h('div', { class: 'top-actions' },
+        showViewToggle && h('div', { class: 'view-toggle' },
+          h('button', { class: state.route === 'daily' ? 'active' : '',
+            onClick: () => { state.route = 'daily'; render(); } }, 'Day'),
+          h('button', { class: state.route === 'monthly' ? 'active' : '',
+            onClick: () => { state.route = 'monthly'; render(); } }, 'Month'),
+        ),
+        h('button', { class: 'icon-btn', title: 'Settings',
+          onClick: () => { state.route = 'settings'; render(); } },
+          h('span', { innerHTML: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' })),
       ),
     );
   }
 
-  return h('div', {
-    class: 'day-row' + (ghost ? ' ghost' : ''),
-    onClick: () => {
-      if (isPinned) {
-        ui.editingDayRowId = e.id;
+  // ============================================================
+  // DAILY
+  // ============================================================
+  function renderGreeting(d) {
+    const name = (state.userName || '').trim();
+    if (!name) return null;
+    if (!d.isToday) return null; // only on today
+    const hour = new Date().getHours();
+    let salutation;
+    if (hour < 5) salutation = 'Still up,';
+    else if (hour < 12) salutation = 'Good morning,';
+    else if (hour < 17) salutation = 'Good afternoon,';
+    else if (hour < 21) salutation = 'Good evening,';
+    else salutation = 'Evening,';
+    return h('div', { class: 'greeting' },
+      salutation + ' ',
+      h('span', { class: 'name' }, name),
+      '.',
+    );
+  }
+
+  function renderDaily(d) {
+    return h('main', { class: 'shell daily' },
+      renderGreeting(d),
+      renderDateStripDaily(d),
+      renderDayHero(d),
+      renderLedger(d),
+    );
+  }
+
+  function renderDateStripDaily(d) {
+    return h('div', { class: 'date-strip' },
+      h('div', { class: 'month' }, MONTH_NAMES[state.month] + ' ' + state.year),
+      h('div', { class: 'day-nav' },
+        h('button', { class: 'chev', onClick: () => stepDay(-1) },
+          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 18l-6-6 6-6"/></svg>' })),
+        h('button', { class: 'chev', onClick: () => stepDay(1) },
+          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>' })),
+        !d.isToday && h('button', { class: 'today-jump', onClick: () => {
+          state.year = TODAY.year; state.month = TODAY.month; state.selectedDay = TODAY.day; render();
+        } }, h('span', { class: 'pulse' }), 'Today'),
+      ),
+    );
+  }
+
+  function renderMiniSpark() {
+    const data = state.history.slice();
+    const W = 88, H = 26, P = 3;
+    const max = Math.max(...data) * 1.1;
+    const stepX = (W - P * 2) / (data.length - 1);
+    const points = data.map((v, i) => {
+      const x = P + i * stepX;
+      const y = P + (H - P * 2) * (1 - v / max);
+      return [x, y];
+    });
+    const pathD = points.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+    const last = points[points.length - 1];
+    const avg = data.reduce((a,b)=>a+b,0) / data.length;
+    const baseY = P + (H-P*2)*(1 - avg/max);
+
+    return h('div', { class: 'mini-spark' },
+      h('div', { class: 'lbl' }, '7d'),
+      h('div', { innerHTML: `
+        <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+          <line class="ms-baseline" x1="${P}" y1="${baseY.toFixed(1)}" x2="${W-P}" y2="${baseY.toFixed(1)}" />
+          <path class="ms-line" d="${pathD}" />
+          <circle class="ms-today" cx="${last[0].toFixed(1)}" cy="${last[1].toFixed(1)}" r="2.5" />
+        </svg>` }),
+    );
+  }
+
+  function renderDayHero(d) {
+    const dow = DOW_NAMES[new Date(state.year, state.month, state.selectedDay).getDay()];
+    const remainingAbs = Math.abs(Math.round(d.remaining));
+    const overClass = d.overToday ? ' over' : '';
+
+    const today = state.history[state.history.length - 1];
+    const avg = Math.round(state.history.reduce((a,b)=>a+b,0) / state.history.length);
+    const vsAvg = today - avg;
+    let paceCopy;
+    if (Math.abs(d.pace) < 5) {
+      paceCopy = h('span', {}, 'You\'re ',
+        h('span', { class: 'pace-num' }, 'on track'),
+        ' for the month.');
+    } else if (d.pace > 0) {
+      paceCopy = h('span', {},
+        h('span', { class: 'pace-num over' }, '$' + Math.round(d.pace)),
+        ' over pace this month',
+        vsAvg !== 0 ? ' · ' + (vsAvg > 0 ? '+$' + vsAvg : '−$' + (-vsAvg)) + ' vs 7-day avg' : '.');
+    } else {
+      paceCopy = h('span', {},
+        h('span', { class: 'pace-num under' }, '$' + Math.round(-d.pace)),
+        ' under pace this month',
+        vsAvg !== 0 ? ' · ' + (vsAvg > 0 ? '+$' + vsAvg : '−$' + (-vsAvg)) + ' vs 7-day avg' : '.');
+    }
+
+    const numEl = h('span', { class: 'num', 'data-target': remainingAbs }, '0');
+
+    return h('section', {},
+      h('div', { class: 'day-header' },
+        h('div', { class: 'date-block' },
+          h('div', { class: 'dow' }, dow.toLowerCase()),
+          h('div', { class: 'day-num' },
+            state.selectedDay,
+            h('span', { class: 'ord' }, ord(state.selectedDay)),
+          ),
+        ),
+        renderMiniSpark(),
+      ),
+      h('div', { class: 'figure-block' },
+        h('div', { class: 'figure-label' }, d.overToday ? 'Over today by' : 'Left to spend today'),
+        h('div', { class: 'figure-amount' + overClass },
+          h('span', { class: 'currency' }, d.overToday ? '−$' : '$'),
+          numEl,
+        ),
+        h('div', { class: 'figure-pace' }, paceCopy),
+      ),
+    );
+  }
+
+  function renderLedger(d) {
+    const hasExp = d.dayExp.length > 0;
+    return h('section', { class: 'ledger-section' },
+      h('div', { class: 'ledger-head' },
+        h('h2', { class: 'ttl' }, 'The ledger'),
+        h('div', { class: 'meta' }, d.dayExp.length + (d.dayExp.length === 1 ? ' entry' : ' entries')),
+      ),
+      hasExp
+        ? h('div', {},
+            ...d.dayExp.map(e => {
+              const cat = d.catByKey[e.cat];
+              const ghost = ui.ghostId === e.id ? ' ghost' : '';
+              return h('div', { class: 'ledger-row' + ghost,
+                  onClick: () => openEditModal(e.id),
+                  role: 'button', tabindex: '0' },
+                h('span', { class: 'dot', style: { background: cat?.color || '#888' } }),
+                h('div', { class: 'body' },
+                  h('div', { class: 'label' }, e.label),
+                  h('div', { class: 'cat-inline' }, cat?.label || e.cat),
+                ),
+                h('div', { class: 'amt' }, '$' + e.amount),
+                h('button', { class: 'x',
+                  onClick: (ev) => { ev.stopPropagation(); removeExpense(e.id); } }, '×'),
+              );
+            })
+          )
+        : h('div', { class: 'ledger-empty' }, 'Nothing logged yet.',
+            h('span', { class: 'hint' }, 'Tap + Log expense to begin')),
+      hasExp && h('div', { class: 'ledger-total' },
+        h('div', { class: 'lbl' }, 'Total'),
+        h('div', { class: 'sum' }, '$' + Math.round(d.daySpent)),
+      ),
+      h('div', { class: 'close-row' },
+        h('button', { class: 'ghost-pill' + (state.closedDays.includes(state.selectedDay) ? ' active' : ''),
+          onClick: () => toggleClosedFor(state.selectedDay) },
+          state.closedDays.includes(state.selectedDay) ? 'Reopen day' : 'Close day'),
+      ),
+    );
+  }
+
+  // ============================================================
+  // MONTHLY
+  // ============================================================
+  function renderMonthly(d) {
+    return h('main', { class: 'shell monthly' },
+      renderDateStripMonth(d),
+      renderMonthHero(d),
+      renderMonthChart(d),
+      renderCalendar(d),
+      renderCatBreakdown(d),
+    );
+  }
+
+  function renderDateStripMonth(d) {
+    const isCurrent = state.month === TODAY.month && state.year === TODAY.year;
+    return h('div', { class: 'date-strip' },
+      h('div', { class: 'month' }, String(state.year)),
+      h('div', { class: 'day-nav' },
+        h('button', { class: 'chev', onClick: () => stepMonth(-1) },
+          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 18l-6-6 6-6"/></svg>' })),
+        h('button', { class: 'chev', onClick: () => stepMonth(1) },
+          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>' })),
+        !isCurrent && h('button', { class: 'today-jump', onClick: () => {
+          state.year = TODAY.year; state.month = TODAY.month; render();
+        } }, h('span', { class: 'pulse' }), 'Now'),
+      ),
+    );
+  }
+
+  function renderMonthHero(d) {
+    const remaining = state.monthlyBudget - d.monthSpent;
+    const isOver = remaining < 0;
+    let paceVal, paceClass = 'muted', paceSub;
+    if (Math.abs(d.pace) < 10) { paceVal = 'On track'; paceSub = 'Pacing well'; }
+    else if (d.pace > 0) { paceVal = '+$' + Math.round(d.pace); paceClass = 'over'; paceSub = 'Over pace'; }
+    else { paceVal = '−$' + Math.round(-d.pace); paceClass = 'under'; paceSub = 'Under pace'; }
+
+    return h('section', {},
+      h('div', { class: 'month-headline-wrap' },
+        h('div', { class: 'month-kicker' }, d.isCurrentMonth ? 'so far in' : 'looking back at'),
+        h('h1', { class: 'month-headline' }, MONTH_NAMES[state.month]),
+      ),
+      h('div', { class: 'month-stats' },
+        h('div', { class: 'cell' },
+          h('div', { class: 'lbl' }, 'Spent'),
+          h('div', { class: 'val' }, '$' + Math.round(d.monthSpent)),
+          h('div', { class: 'sub' }, 'of $' + state.monthlyBudget),
+        ),
+        h('div', { class: 'cell' },
+          h('div', { class: 'lbl' }, isOver ? 'Over by' : 'Left'),
+          h('div', { class: 'val' + (isOver ? ' over' : '') }, '$' + Math.abs(Math.round(remaining))),
+          h('div', { class: 'sub' }, d.isCurrentMonth ? (d.dim - d.dayForPace) + ' days left' : 'final'),
+        ),
+        h('div', { class: 'cell' },
+          h('div', { class: 'lbl' }, 'Pace'),
+          h('div', { class: 'val ' + paceClass }, paceVal),
+          h('div', { class: 'sub ' + paceClass }, paceSub),
+        ),
+      ),
+    );
+  }
+
+  // ---- monthly cumulative chart ----
+  function renderMonthChart(d) {
+    const W = 320, H = 160, PT = 16, PB = 12, PL = 6, PR = 6;
+    const days = d.dim;
+    const dailyBudget = state.monthlyBudget / days;
+
+    // cumulative spend up to each day (1..days)
+    const cumActual = [];
+    for (let day = 1; day <= days; day++) {
+      const prev = cumActual[cumActual.length - 1] || 0;
+      const dayTotal = (d.byDay[day] || []).reduce((a,b) => a + b.amount, 0);
+      cumActual.push(prev + dayTotal);
+    }
+    const cumBudget = [];
+    for (let day = 1; day <= days; day++) cumBudget.push(dailyBudget * day);
+
+    // for current month, only draw actual line up to today
+    const drawUntil = d.isCurrentMonth ? Math.min(TODAY.day, days) : days;
+
+    // chart scales
+    const yMax = Math.max(state.monthlyBudget, cumActual[drawUntil - 1] || 0) * 1.05;
+    const xFor = (day) => PL + ((day - 1) / (days - 1)) * (W - PL - PR);
+    const yFor = (val) => PT + (1 - val / yMax) * (H - PT - PB);
+
+    // build paths
+    const actualPts = [];
+    for (let day = 1; day <= drawUntil; day++) {
+      actualPts.push([xFor(day), yFor(cumActual[day - 1])]);
+    }
+    const actualD = actualPts.map((p, i) => (i === 0 ? 'M' : 'L') + p[0].toFixed(1) + ',' + p[1].toFixed(1)).join(' ');
+
+    // measure the actual line's path length so the draw-in animation reveals exactly the line
+    let pathLen = 0;
+    for (let i = 1; i < actualPts.length; i++) {
+      const dx = actualPts[i][0] - actualPts[i-1][0];
+      const dy = actualPts[i][1] - actualPts[i-1][1];
+      pathLen += Math.sqrt(dx*dx + dy*dy);
+    }
+    pathLen = Math.ceil(pathLen) + 4; // small buffer
+
+    const budgetD = [];
+    for (let day = 1; day <= days; day++) {
+      budgetD.push((day === 1 ? 'M' : 'L') + xFor(day).toFixed(1) + ',' + yFor(cumBudget[day - 1]).toFixed(1));
+    }
+
+    const lastActualPt = actualPts[actualPts.length - 1];
+    const todaySpent = cumActual[drawUntil - 1] || 0;
+    const todayBudget = cumBudget[drawUntil - 1] || 0;
+    const diff = todaySpent - todayBudget;
+
+    let summary;
+    if (Math.abs(diff) < 5) {
+      summary = h('span', {}, 'Tracking right at budget through ',
+        h('span', { class: 'num' }, 'day ' + drawUntil), '.');
+    } else if (diff > 0) {
+      summary = h('span', {}, 'Through day ' + drawUntil + ', you\'re ',
+        h('span', { class: 'num over' }, '$' + Math.round(diff)),
+        ' ahead of budget.');
+    } else {
+      summary = h('span', {}, 'Through day ' + drawUntil + ', you\'re ',
+        h('span', { class: 'num under' }, '$' + Math.round(-diff)),
+        ' under budget.');
+    }
+
+    // x-axis labels: 1, ~mid, today/last
+    const midDay = Math.round(days / 2);
+
+    return h('section', { class: 'chart-section' },
+      h('div', { class: 'chart-head' },
+        h('div', { class: 'ttl' }, 'Cumulative spend'),
+        h('div', { class: 'legend' },
+          h('span', { class: 'leg actual' }, 'actual'),
+          h('span', { class: 'leg budget' }, 'budget'),
+        ),
+      ),
+      h('div', { class: 'chart-svg-wrap' },
+        h('div', { innerHTML: `
+          <svg class="chart-svg" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
+            <path class="chart-budget-line" d="${budgetD.join(' ')}" />
+            <path class="chart-actual-line" d="${actualD}" style="--draw-len:${pathLen}; stroke-dasharray:${pathLen};" />
+            ${lastActualPt ? `<circle class="chart-today-marker" cx="${lastActualPt[0].toFixed(1)}" cy="${lastActualPt[1].toFixed(1)}" r="3.5" />` : ''}
+          </svg>
+        ` }),
+        h('div', { class: 'chart-axis' },
+          h('span', {}, 'Day 1'),
+          h('span', {}, 'Day ' + midDay),
+          h('span', { class: d.isCurrentMonth ? 'today' : '' },
+            d.isCurrentMonth ? 'Today' : 'Day ' + days),
+        ),
+      ),
+      h('div', { class: 'chart-summary' }, summary),
+    );
+  }
+
+  // ---- calendar with budget tinting ----
+  function renderCalendar(d) {
+    const firstDow = new Date(state.year, state.month, 1).getDay();
+    const cells = [];
+    for (let i = 0; i < firstDow; i++) cells.push(null);
+    for (let day = 1; day <= d.dim; day++) cells.push(day);
+    while (cells.length % 7 !== 0) cells.push(null);
+
+    return h('section', { class: 'cal-section' },
+      h('div', { class: 'cal-head' },
+        h('div', { class: 'ttl' }, 'Daily heat'),
+        h('div', { class: 'legend' },
+          h('span', { class: 'leg under' }, 'under'),
+          h('span', { class: 'leg over' }, 'over'),
+        ),
+      ),
+      h('div', { class: 'cal-dow' }, ...DOW_SHORT.map(s => h('div', {}, s))),
+      h('div', { class: 'cal-grid' }, ...cells.map((day, i) => renderCalCell(day, d, i))),
+    );
+  }
+
+  function renderCalCell(day, d, idx) {
+    if (day == null) return h('div', { class: 'cal-cell empty' }, h('div', { class: 'cell-btn' }));
+    const exp = d.byDay[day] || [];
+    const total = exp.reduce((a, b) => a + b.amount, 0);
+    const isToday = d.isCurrentMonth && day === TODAY.day;
+    const isSel = day === state.selectedDay;
+    const isFuture = d.isCurrentMonth && day > TODAY.day;
+
+    const cls = ['cal-cell'];
+    if (isToday) cls.push('today');
+    if (isSel) cls.push('selected');
+    if (isFuture) cls.push('future');
+
+    // budget-based tint: green if under, red if over, neutral if no spend
+    let bgColor = '';
+    if (!isSel && !isFuture && total > 0) {
+      const ratio = total / d.dailyBudget; // >1 = over
+      if (ratio > 1) {
+        // over — red, intensity by how much over (cap at 2x)
+        const intensity = Math.min((ratio - 1) / 1, 1);
+        const alpha = (0.10 + intensity * 0.22).toFixed(2);
+        bgColor = `rgba(155, 60, 60, ${alpha})`;
       } else {
-        // Jump to that day first; user can click again to edit.
-        state.selectedDay = e.day;
-        ui.editingDayRowId = null;
+        // under — green, gentler
+        const intensity = ratio; // 0..1
+        const alpha = (0.05 + intensity * 0.10).toFixed(2);
+        bgColor = `rgba(90, 122, 74, ${alpha})`;
       }
-      render();
-    },
-  },
-    h('span', { class: 'dot', style: { background: cat.color } }),
-    h('div', {},
-      h('div', { class: 'label' }, e.label),
-      h('div', { class: 'cat' }, cat.label),
-    ),
-    h('div', { class: 'row-actions' },
-      h('span', { class: 'amt' }, `$${e.amount}`),
-      h('button', {
-        class: 'x', title: 'Delete',
-        onClick: (ev) => { ev.stopPropagation(); deleteExpense(e.id); },
-      }, '×'),
-    ),
-  );
-}
+    }
+    const cellStyle = bgColor ? { background: bgColor } : {};
+    // staggered cell-lay animation
+    const animStyle = { animationDelay: (Math.min(idx, 35) * 12) + 'ms' };
 
-function renderBudgetRail(d) {
-  const ratio = Math.min(1, d.monthTotal / Math.max(1, d.effBudget));
-  const paceRatio = d.expectedSoFar > 0 && d.expectedSoFar < d.effBudget
-    ? (d.expectedSoFar / Math.max(1, d.effBudget)) * 100 : null;
-  const over = d.monthDelta > 0;
-
-  return h('div', { class: 'budget-rail' },
-    h('div', { class: 'rail-track' },
-      h('div', { class: 'rail-fill' + (over ? ' over' : ''), style: { width: `${ratio * 100}%` } }),
-      paceRatio != null && h('div', { class: 'rail-pace', style: { left: `${paceRatio}%` }, title: 'Pace marker' }),
-    ),
-    h('div', { class: 'rail-meta' },
-      h('span', {}, `${fmtMoney(d.monthTotal)} of ${fmtMoney(d.effBudget)}` + (state.closedDays.length > 0 ? ` · ${state.closedDays.length} closed` : '')),
-      h('span', { class: over ? 'rail-over' : '' },
-        over ? `+${fmtMoney(d.monthDelta)} over pace` : `${fmtMoney(-d.monthDelta)} under pace`),
-    ),
-    h('div', { class: 'rail-meta-2' },
-      h('span', {}, d.isCurrentMonth ? `Day ${TODAY.day} of ${d.dim} · ${fmtMoney(d.dayRate)}/day` : `${fmtMoney(d.dayRate)}/day`),
-      h('span', {}, `${fmtMoney(Math.max(0, d.effBudget - d.monthTotal))} remaining`),
-    ),
-  );
-}
-
-// =============================================================
-// RIGHT column
-// =============================================================
-
-function renderRight(d) {
-  return h('div', { class: 'right' },
-    h('div', { class: 'right-head' },
-      h('h2', {}, 'This month'),
-      h('div', { class: 'right-controls' },
-        h('button', { class: 'icon-btn chev', title: 'Previous month', onClick: prevMonth }, chevronSvg('left')),
-        h('button', { class: 'icon-btn chev', title: 'Next month', onClick: nextMonth }, chevronSvg('right')),
+    const cellChildren = [h('div', { class: 'cell-num' }, String(day))];
+    if (total > 0) {
+      cellChildren.push(h('div', { class: 'cell-amt' }, '$' + Math.round(total)));
+    }
+    return h('div', { class: cls.join(' '), style: animStyle },
+      h('button', { class: 'cell-btn', style: cellStyle,
+        onClick: () => { state.selectedDay = day; state.route = 'daily'; render(); } },
+        ...cellChildren,
       ),
-    ),
-    renderCalendar(d),
-    renderByCategory(d),
-  );
-}
-
-function chevronSvg(dir) {
-  const path = dir === 'left' ? 'M9 2 L4 7 L9 12' : 'M5 2 L10 7 L5 12';
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '14'); svg.setAttribute('height', '14'); svg.setAttribute('viewBox', '0 0 14 14'); svg.setAttribute('fill', 'none');
-  const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-  p.setAttribute('d', path); p.setAttribute('stroke', 'currentColor'); p.setAttribute('stroke-width', '1.2');
-  svg.appendChild(p); return svg;
-}
-
-function sunMoonSvg(dark) {
-  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-  svg.setAttribute('width', '18'); svg.setAttribute('height', '18'); svg.setAttribute('viewBox', '0 0 24 24');
-  svg.setAttribute('fill', 'none'); svg.setAttribute('stroke', 'currentColor'); svg.setAttribute('stroke-width', '1.3');
-  if (dark) {
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', 'M20 13.5A8 8 0 0 1 10.5 4a7 7 0 1 0 9.5 9.5z');
-    svg.appendChild(p);
-  } else {
-    const c = document.createElementNS('http://www.w3.org/2000/svg', 'circle');
-    c.setAttribute('cx', '12'); c.setAttribute('cy', '12'); c.setAttribute('r', '4');
-    svg.appendChild(c);
-    const p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    p.setAttribute('d', 'M12 2v2M12 20v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2 12h2M20 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4');
-    svg.appendChild(p);
-  }
-  return svg;
-}
-
-function renderCalendar(d) {
-  const cells = buildCells(state.year, state.month);
-  const isCurMonth = d.isCurrentMonth;
-  return h('div', {},
-    h('div', { class: 'cal-dow' }, ...DOW_SHORT.map((s, i) => h('div', { key: i }, s))),
-    h('div', { class: 'cal-grid' }, ...cells.map((day, i) => renderCalCell(day, i, d, isCurMonth))),
-  );
-}
-
-function renderCalCell(day, i, d, isCurMonth) {
-  if (day == null) return h('div', { class: 'cal-cell empty' });
-  const exp     = d.byDay[day] || [];
-  const total   = exp.reduce((a, b) => a + b.amount, 0);
-  const dom     = dominantCatForDay(exp, d.catByKey);
-  const closed  = state.closedDays.includes(day);
-  const isToday = isCurMonth && day === TODAY.day;
-  const isSel   = day === state.selectedDay;
-  const fill    = closed ? 'rgba(0,0,0,0.04)' : (total > 0 ? (dom?.color || '#000') + '22' : 'transparent');
-
-  const cls = ['cal-cell'];
-  if (isToday) cls.push('today');
-  if (isSel)   cls.push('selected');
-  if (closed)  cls.push('closed');
-
-  return h('div', { class: cls.join(' ') },
-    h('button', {
-      class: 'cell-btn',
-      style: { background: fill },
-      onClick: () => { state.selectedDay = day; ui.editingDayRowId = null; render(); },
-    },
-      h('div', { class: 'cell-head' },
-        dom && !closed && h('span', { class: 'cell-dot', style: { background: dom.color } }),
-        h('span', { class: 'cell-num' }, String(day)),
-        isToday && h('span', { class: 'today-pulse', title: 'Today' }),
-      ),
-      total > 0 && !closed && h('div', { class: 'cell-amt' }, `$${Math.round(total)}`),
-      closed && h('div', { class: 'cell-dash' }, '—'),
-    ),
-    h('button', {
-      class: 'cell-toggle',
-      title: closed ? 'Reopen this day' : 'Close this day (skip from pacing)',
-      onClick: (ev) => { ev.stopPropagation(); toggleClosedFor(day); },
-    }, closed ? '↺' : '×'),
-  );
-}
-
-function renderByCategory(d) {
-  const showBudgets = state.budgetsEnabled;
-  return h('div', {},
-    h('div', { class: 'by-cat-head' },
-      h('div', { class: 'mono' }, 'By category'),
-      h('div', { class: 'mono-tight' }, showBudgets ? 'Spent / Budget' : 'Spent · % of month'),
-    ),
-    h('div', { class: 'by-cat-grid' },
-      h('div', { class: 'donut-wrap' }, donutSvg(d.totals, d.monthTotal)),
-      h('div', { class: 'cat-list' }, ...d.totals.map(t => showBudgets ? catBudgetRow(t) : catPlainRow(t, d.monthTotal))),
-    ),
-  );
-}
-
-function donutSvg(totals, monthTotal) {
-  const size = 150, thickness = 20, gap = 2;
-  const r = (size - thickness) / 2;
-  const c = size / 2;
-  const circ = 2 * Math.PI * r;
-  const total = totals.reduce((a, b) => a + b.amount, 0) || 1;
-
-  const NS = 'http://www.w3.org/2000/svg';
-  const svg = document.createElementNS(NS, 'svg');
-  svg.setAttribute('width', String(size)); svg.setAttribute('height', String(size));
-  svg.setAttribute('viewBox', `0 0 ${size} ${size}`);
-  svg.style.display = 'block';
-
-  const bg = document.createElementNS(NS, 'circle');
-  bg.setAttribute('cx', String(c)); bg.setAttribute('cy', String(c)); bg.setAttribute('r', String(r));
-  bg.setAttribute('fill', 'none'); bg.setAttribute('stroke', 'rgba(0,0,0,0.06)'); bg.setAttribute('stroke-width', String(thickness));
-  svg.appendChild(bg);
-
-  let offset = 0;
-  for (const t of totals) {
-    const frac = t.amount / total;
-    const len = Math.max(0, frac * circ - gap);
-    const dash = `${len} ${circ - len}`;
-    const dashOff = -offset;
-    offset += frac * circ;
-    const arc = document.createElementNS(NS, 'circle');
-    arc.setAttribute('cx', String(c)); arc.setAttribute('cy', String(c)); arc.setAttribute('r', String(r));
-    arc.setAttribute('fill', 'none'); arc.setAttribute('stroke', t.color); arc.setAttribute('stroke-width', String(thickness));
-    arc.setAttribute('stroke-dasharray', dash); arc.setAttribute('stroke-dashoffset', String(dashOff));
-    arc.setAttribute('stroke-linecap', 'butt');
-    arc.setAttribute('transform', `rotate(-90 ${c} ${c})`);
-    arc.style.transition = 'stroke-dasharray 500ms cubic-bezier(0.22,1,0.36,1), stroke-dashoffset 500ms cubic-bezier(0.22,1,0.36,1)';
-    svg.appendChild(arc);
+    );
   }
 
-  const lbl = document.createElementNS(NS, 'text');
-  lbl.setAttribute('x', String(c)); lbl.setAttribute('y', String(c - 2));
-  lbl.setAttribute('text-anchor', 'middle'); lbl.setAttribute('dominant-baseline', 'middle');
-  lbl.setAttribute('style', 'font: 500 22px var(--font-display); fill: var(--ink);');
-  lbl.textContent = `$${Math.round(monthTotal)}`;
-  svg.appendChild(lbl);
-
-  const sub = document.createElementNS(NS, 'text');
-  sub.setAttribute('x', String(c)); sub.setAttribute('y', String(c + 18));
-  sub.setAttribute('text-anchor', 'middle'); sub.setAttribute('dominant-baseline', 'middle');
-  sub.setAttribute('style', 'font: 500 9px var(--font-mono); letter-spacing: 0.18em; fill: var(--ink-soft);');
-  sub.textContent = 'TOTAL';
-  svg.appendChild(sub);
-
-  return svg;
-}
-
-function catPlainRow(t, monthTotal) {
-  const pct = monthTotal > 0 ? Math.round((t.amount / monthTotal) * 100) : 0;
-  return h('div', { class: 'cat-row' },
-    h('span', { class: 'cat-dot', style: { background: t.color } }),
-    h('span', { class: 'cat-name' }, t.label),
-    h('span', { class: 'cat-amt' }, `$${t.amount}`),
-    h('span', { class: 'cat-pct' }, `${pct}%`),
-  );
-}
-
-function catBudgetRow(t) {
-  const ratio = t.budget > 0 ? t.amount / t.budget : 0;
-  const over = ratio > 1;
-  return h('div', { class: 'cat-row budget' },
-    h('span', { class: 'cat-dot', style: { background: t.color } }),
-    h('div', { class: 'cat-bar-wrap' },
-      h('div', { style: { font: '400 14px var(--font-sans)' } }, t.label),
-      h('div', { class: 'cat-bar-track' },
-        h('div', { class: 'cat-bar-fill', style: {
-          width: `${Math.min(100, ratio * 100)}%`,
-          background: over ? 'var(--over)' : t.color,
-        } }),
+  // ---- by-category breakdown ----
+  function renderCatBreakdown(d) {
+    if (d.catList.length === 0) return null;
+    return h('section', { class: 'cat-section' },
+      h('div', { class: 'cat-section-head' },
+        h('h2', { class: 'ttl' }, 'By category'),
+        h('div', { class: 'right' },
+          h('div', { class: 'toggle-mini-row' },
+            'Budgets',
+            h('button', { class: 'toggle' + (state.budgetsEnabled ? ' on' : ''),
+              onClick: (ev) => {
+                state.budgetsEnabled = !state.budgetsEnabled;
+                document.body.classList.toggle('budgets-off', !state.budgetsEnabled);
+                ev.currentTarget.classList.toggle('on', state.budgetsEnabled);
+              },
+              'aria-label': 'Toggle per-category budgets' },
+              h('div', { class: 'toggle-knob' }),
+            ),
+          ),
+        ),
       ),
-    ),
-    h('span', { class: 'cat-amt' }, `$${t.amount}`),
-    h('span', { class: 'cat-budget' }, `/ $${t.budget}`),
-  );
-}
+      renderDonut(d),
+      ...d.catList.map((c, i) => renderCatRow(c, d, i)),
+    );
+  }
 
-// =============================================================
-// Settings page
-// =============================================================
+  function renderDonut(d) {
+    const size = 118, stroke = 14;
+    const cx = size / 2, cy = size / 2;
+    const r = (size - stroke) / 2;
+    const circ = 2 * Math.PI * r;
+    const gap = 1.5; // visual gap between segments
 
-function renderSettings(d) {
-  return h('div', { class: 'settings' },
-    renderSettingsTop(),
-    h('div', { class: 'set-kicker' }, 'Adjust your'),
-    h('h1', { class: 'set-headline' }, 'Categories & budget.'),
-    renderStatStrip(d),
-    renderBudgetModeSection(),
-    renderAppearanceSection(),
-    renderCategoriesSection(),
-    renderClosedDaysSection(),
-  );
-}
+    const total = d.catList.reduce((a, c) => a + c.amount, 0);
 
-function renderSettingsTop() {
-  return h('div', { class: 'set-top' },
-    h('button', { class: 'set-back', onClick: () => setRoute('dashboard') }, '← Back'),
-  );
-}
+    // each arc has a start angle (degrees) and a length along the circumference
+    const arcs = [];
+    let cumOffset = 0;
+    for (const c of d.catList) {
+      const len = (c.amount / total) * circ;
+      const visible = Math.max(0, len - gap);
+      // angle to rotate so the arc begins at the top (12 o'clock).
+      // a default <circle> starts its stroke at 3 o'clock; we rotate -90 to move start to 12,
+      // then add the cumulative-offset angle so this arc begins after prior ones.
+      const startDeg = -90 + (cumOffset / circ) * 360;
+      arcs.push({ visible, startDeg, color: c.color });
+      cumOffset += len;
+    }
 
-function renderStatStrip(d) {
-  const totalBudget = state.budgetsEnabled ? d.totalBudget : (state.monthlyCap || 0);
-  const enabledCount = state.categories.filter(c => c.enabled).length;
-  return h('div', { class: 'set-stat-strip' },
-    renderSettingStat('Monthly budget', `$${totalBudget}`, state.budgetsEnabled ? 'sum of categories' : 'monthly cap'),
-    renderSettingStat('Active categories', enabledCount, `of ${state.categories.length}`),
-    renderSettingStat('Days closed', state.closedDays.length, 'this month'),
-  );
-}
+    const top = d.catList[0];
 
-function renderSettingStat(label, value, sub) {
-  return h('div', { class: 'set-stat' },
-    h('div', { class: 'lbl' }, label),
-    h('div', { class: 'val' }, String(value)),
-    h('div', { class: 'sub' }, sub),
-  );
-}
-
-function renderBudgetModeSection() {
-  const sub = state.budgetsEnabled
-    ? 'Each category has its own budget. Monthly total is the sum.'
-    : 'Single monthly cap only — categories track spend but no per-category limits.';
-  return h('section', { class: 'set-section' },
-    h('div', { class: 'head' }, 'Budget mode'),
-    h('div', { class: 'set-row' },
-      h('div', {},
-        h('div', { class: 'title' }, 'Per-category budgets'),
-        h('div', { class: 'desc' }, sub),
+    return h('div', { class: 'donut-wrap' },
+      h('div', { innerHTML: `
+        <svg width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">
+          <circle class="donut-track" cx="${cx}" cy="${cy}" r="${r}" stroke-width="${stroke}" />
+          ${arcs.map((a, i) => `
+            <circle
+              class="donut-arc"
+              cx="${cx}" cy="${cy}" r="${r}"
+              stroke="${a.color}"
+              stroke-width="${stroke}"
+              stroke-dasharray="${a.visible.toFixed(2)} ${(circ - a.visible).toFixed(2)}"
+              transform="rotate(${a.startDeg.toFixed(2)} ${cx} ${cy})"
+              style="--off-start:${(-a.visible).toFixed(2)}; stroke-dashoffset:0; animation: donutGrow 720ms ${100 + i * 90}ms cubic-bezier(0.22,1,0.36,1) backwards;"
+            />
+          `).join('')}
+        </svg>
+      ` }),
+      h('div', { class: 'donut-center' },
+        h('div', { class: 'lbl' }, 'This month'),
+        h('div', { class: 'val' }, '$' + Math.round(total)),
+        top && h('div', { class: 'top-cat' },
+          h('span', { class: 'swatch', style: { background: top.color } }),
+          'Mostly ' + top.label.toLowerCase()),
       ),
-      renderToggle(state.budgetsEnabled, (v) => setBudgetsEnabled(v)),
-    ),
-    !state.budgetsEnabled && h('div', { class: 'set-row' },
-      h('div', { class: 'title' }, 'Monthly cap'),
-      h('div', { class: 'cap-input' },
-        h('span', {}, '$'),
-        h('input', {
-          type: 'number', min: '0', value: String(state.monthlyCap),
-          onInput: (ev) => { setMonthlyCap(ev.target.value); },
-        }),
-      ),
-    ),
-  );
-}
+    );
+  }
 
-function renderAppearanceSection() {
-  return h('section', { class: 'set-section' },
-    h('div', { class: 'head' }, 'Appearance'),
-    h('div', { class: 'set-row' },
-      h('div', {},
-        h('div', { class: 'title' }, 'Dark mode'),
-        h('div', { class: 'desc' }, 'Switches the canvas to a warm-night palette.'),
-      ),
-      renderToggle(state.darkMode, () => toggleDark()),
-    ),
-  );
-}
+  function renderCatRow(c, d, i) {
+    const pct = c.budget > 0 ? Math.min(100, (c.amount / c.budget) * 100) : 0;
+    const isOver = c.budget > 0 && c.amount > c.budget;
 
-function renderCategoriesSection() {
-  const ready = !!ui.newCatName.trim();
-  const handleAdd = () => {
-    const name = ui.newCatName.trim();
-    if (!name) return;
-    ui.newCatName = '';
-    addCategory(name); // triggers render(); ui.newCatName already reset, so input clears.
-  };
-  return h('section', { class: 'set-section' },
-    h('div', { class: 'head' }, 'Categories'),
-    h('div', {}, ...state.categories.map(c => renderCategoryRow(c))),
-    h('div', { class: 'cat-add-row' },
-      h('input', {
-        type: 'text', placeholder: 'New category…', value: ui.newCatName,
-        onInput: (ev) => { ui.newCatName = ev.target.value;
-          // Live-update the button enabled state without a full re-render.
-          const btn = document.querySelector('.cat-add-btn');
-          if (btn) btn.classList.toggle('ready', !!ev.target.value.trim());
-        },
-        onKeydown: (ev) => { if (ev.key === 'Enter') handleAdd(); },
-      }),
-      h('button', {
-        class: 'cat-add-btn' + (ready ? ' ready' : ''),
-        onClick: handleAdd,
-      }, '+ Add'),
-    ),
-  );
-}
-
-function renderCategoryRow(cat) {
-  const showColors = ui.openColorPickerKey === cat.key;
-  return h('div', { class: 'cat-row-edit' + (cat.enabled ? '' : ' disabled') },
-    h('div', { class: 'color-swatch-wrap' },
-      h('button', {
-        class: 'color-swatch', style: { background: cat.color },
-        title: 'Change color',
-        onClick: (ev) => {
-          ev.stopPropagation();
-          ui.openColorPickerKey = showColors ? null : cat.key;
-          render();
-        },
-      }),
-      showColors && h('div', { class: 'color-popover' },
-        ...PALETTE_POOL.map(c => h('button', {
-          class: c === cat.color ? 'active' : '',
-          style: { background: c },
-          onClick: () => {
-            updateCategory(cat.key, { color: c });
-            ui.openColorPickerKey = null;
-            render();
-          },
-        })),
+    return h('div', { class: 'cat-row',
+        onClick: () => { state.viewCat = c.key; state.route = 'cat-detail'; render(); } },
+      h('span', { class: 'dot', style: { background: c.color } }),
+      h('div', { class: 'name-block' },
+        h('div', { class: 'name' }, c.label,
+          h('span', { class: 'count' }, '· ' + c.count + (c.count === 1 ? ' charge' : ' charges'))),
+        c.budget > 0 && h('div', { class: 'bar-track' },
+          h('div', { class: 'bar-fill' + (isOver ? ' over' : ''), style: {
+            width: pct + '%', background: c.color,
+            animationDelay: (i * 60 + 80) + 'ms',
+          } }),
+        ),
       ),
-    ),
-    h('input', {
-      class: 'label-input', type: 'text', value: cat.label,
-      onInput: (ev) => {
-        // Avoid a full re-render on every keystroke (would lose focus). Mutate
-        // state directly and persist; UI updates from the next render trigger.
-        cat.label = ev.target.value;
-        saveState();
-      },
-      onBlur: () => render(),
-    }),
-    h('div', { class: 'budget-input' },
+      h('div', { class: 'amt' },
+        '$' + Math.round(c.amount),
+        c.budget > 0 && h('div', { class: 'budget' + (isOver ? ' over' : ' under') },
+          isOver
+            ? '$' + (c.amount - c.budget).toFixed(0) + ' over'
+            : '$' + (c.budget - c.amount).toFixed(0) + ' under'),
+      ),
+      h('span', { class: 'arrow' }, '›'),
+    );
+  }
+
+  // ============================================================
+  // CATEGORY DETAIL
+  // ============================================================
+  function renderCatBudgetLine(cat, total) {
+    const isOver = cat.budget > 0 && total > cat.budget;
+    const delta = Math.abs(cat.budget - total);
+    const deltaCls = cat.budget <= 0 ? '' : (isOver ? 'over' : 'under');
+
+    const budgetInput = h('span', { class: 'budget-input' },
       h('span', {}, '$'),
-      h('input', {
-        type: 'number', min: '0', value: String(cat.budget || 0),
-        onInput: (ev) => {
+      h('input', { type: 'number', min: '0', step: '10',
+        value: String(cat.budget || 0), inputmode: 'numeric',
+        onInput: ev => {
           cat.budget = parseInt(ev.target.value, 10) || 0;
-          saveState();
+          // live update the surrounding caption without full re-render
+          const wrap = ev.target.closest('.cat-budget-line');
+          if (wrap) updateCatBudgetCaption(wrap, cat, total);
         },
         onBlur: () => render(),
-      }),
-    ),
-    renderToggle(cat.enabled, (v) => updateCategory(cat.key, { enabled: v })),
-    h('button', {
-      class: 'row-del', title: 'Delete category',
-      onClick: () => removeCategory(cat.key),
-    }, '×'),
-  );
-}
+        onKeydown: ev => { if (ev.key === 'Enter') ev.target.blur(); } }),
+    );
 
-function renderClosedDaysSection() {
-  const monthAbbr = MONTH_NAMES[state.month].slice(0, 3).toUpperCase();
-  return h('section', { class: 'set-section' },
-    h('div', { class: 'head' }, 'Closed days'),
-    h('div', { class: 'closed-explainer' },
-      'Closing a day skips it from pacing — your monthly budget is reduced by one day’s share.'),
-    h('div', { class: 'closed-chips' },
-      state.closedDays.length === 0
-        ? h('span', { class: 'closed-empty' }, 'None this month.')
-        : state.closedDays.map(day => h('button', {
-            class: 'closed-chip',
-            onClick: () => toggleClosedFor(day),
-          },
-            `${monthAbbr} ${day}`,
-            h('span', { class: 'x' }, '×'),
-          )),
-    ),
-    h('button', { class: 'close-gaps-btn', onClick: closeGaps },
-      'Close past untracked days'),
-  );
-}
+    let body;
+    if (cat.budget <= 0) {
+      body = h('span', {}, 'No budget set — set one: ', budgetInput);
+    } else if (isOver) {
+      body = h('span', {},
+        h('span', { class: 'delta over' }, '$' + Math.round(delta)), ' over your ', budgetInput, ' budget.');
+    } else {
+      body = h('span', {},
+        h('span', { class: 'delta under' }, '$' + Math.round(delta)), ' under your ', budgetInput, ' budget.');
+    }
+    return h('div', { class: 'cat-budget-line' }, body);
+  }
 
-function renderToggle(on, onChange) {
-  return h('button', {
-    class: 'toggle' + (on ? ' on' : ''),
-    onClick: () => onChange(!on),
-    title: on ? 'On' : 'Off',
-  },
-    h('div', { class: 'toggle-knob' }),
-  );
-}
+  // live in-place update so typing in the budget input doesn't blow away focus
+  function updateCatBudgetCaption(wrap, cat, total) {
+    const isOver = cat.budget > 0 && total > cat.budget;
+    const delta = Math.abs(cat.budget - total);
+    const deltaEl = wrap.querySelector('.delta');
+    if (deltaEl) {
+      deltaEl.textContent = '$' + Math.round(delta);
+      deltaEl.classList.toggle('over',  isOver);
+      deltaEl.classList.toggle('under', !isOver && cat.budget > 0);
+    }
+  }
 
-// =============================================================
-// Add modal
-// =============================================================
+  function renderCatDetail(d) {
+    const cat = state.categories.find(c => c.key === state.viewCat);
+    if (!cat) { state.route = 'monthly'; render(); return h('div', {}); }
 
-function openAddModal() {
-  ui.modalOpen = true;
-  ui.modalDay = state.selectedDay;
-  ui.modalAmount = '';
-  ui.modalLabel  = '';
-  const enabled  = state.categories.filter(c => c.enabled);
-  ui.modalCat    = enabled[0]?.key || 'food';
-  render();
-  setTimeout(() => document.querySelector('.modal input[type="number"]')?.focus(), 60);
-}
+    // all expenses in this category for current month
+    const exp = state.expenses.filter(e => e.cat === cat.key);
+    const total = exp.reduce((a, b) => a + b.amount, 0);
+    const sorted = exp.slice().sort((a, b) => b.day - a.day || b.amount - a.amount);
+    const avg = exp.length > 0 ? total / exp.length : 0;
+    const largest = exp.reduce((m, e) => e.amount > (m?.amount || 0) ? e : m, null);
 
-function closeAddModal() {
-  ui.modalOpen = false;
-  render();
-}
-
-function submitAdd() {
-  const n = parseFloat(ui.modalAmount);
-  if (!n || n <= 0) return;
-  const catObj = state.categories.find(c => c.key === ui.modalCat);
-  const id = 'e' + Math.random().toString(36).slice(2, 8);
-  state.expenses.unshift({
-    id, day: ui.modalDay,
-    cat: ui.modalCat,
-    label: (ui.modalLabel || '').trim() || catObj?.label || 'Expense',
-    amount: n,
-  });
-  state.selectedDay = ui.modalDay;
-  ui.ghostId = id;
-  ui.modalOpen = false;
-  render();
-  setTimeout(() => { ui.ghostId = null; render(); }, 800);
-}
-
-function renderModal(d) {
-  const enabledCats = state.categories.filter(c => c.enabled);
-  return h('div', { class: 'modal-backdrop', onClick: closeAddModal },
-    h('div', { class: 'modal', onClick: (ev) => ev.stopPropagation() },
-      h('div', { class: 'modal-kicker' }, 'New expense'),
-      h('div', { class: 'amount-input-wrap' },
-        h('span', { class: 'currency' }, '$'),
-        h('input', {
-          type: 'number', step: '0.01', placeholder: '0', inputmode: 'decimal',
-          value: ui.modalAmount,
-          onInput: (ev) => { ui.modalAmount = ev.target.value; },
-          onKeydown: (ev) => { if (ev.key === 'Enter') submitAdd(); if (ev.key === 'Escape') closeAddModal(); },
+    return h('main', { class: 'shell cat-detail' },
+      h('button', { class: 'back-link', onClick: () => { state.route = 'monthly'; render(); } },
+        h('span', { innerHTML: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>' }),
+        'Back to ' + MONTH_NAMES[state.month]),
+      h('div', { class: 'cat-detail-head' },
+        h('div', { class: 'cat-detail-kicker' },
+          h('span', { class: 'swatch', style: { background: cat.color } }),
+          cat.label.toLowerCase() + ' in ' + MONTH_NAMES[state.month].toLowerCase()),
+        h('h1', { class: 'cat-detail-headline' }, '$' + Math.round(total)),
+        state.budgetsEnabled && renderCatBudgetLine(cat, total),
+      ),
+      h('div', { class: 'cat-detail-stats' },
+        h('div', { class: 'cell' },
+          h('div', { class: 'lbl' }, 'Charges'),
+          h('div', { class: 'val' }, exp.length),
+          h('div', { class: 'sub' }, exp.length === 1 ? 'one entry' : 'across ' + new Set(exp.map(e => e.day)).size + ' days'),
+        ),
+        h('div', { class: 'cell' },
+          h('div', { class: 'lbl' }, 'Average'),
+          h('div', { class: 'val' }, '$' + avg.toFixed(avg < 10 ? 2 : 0)),
+          h('div', { class: 'sub' }, 'per charge'),
+        ),
+        h('div', { class: 'cell' },
+          h('div', { class: 'lbl' }, 'Largest'),
+          h('div', { class: 'val' }, largest ? '$' + largest.amount : '—'),
+          h('div', { class: 'sub' }, largest ? '“' + largest.label + '”' : ''),
+        ),
+      ),
+      h('section', { class: 'ledger-section' },
+        h('div', { class: 'ledger-head' },
+          h('h2', { class: 'ttl' }, 'All entries'),
+          h('div', { class: 'meta' }, exp.length + (exp.length === 1 ? ' charge' : ' charges')),
+        ),
+        ...sorted.map(e => {
+          const ghost = ui.ghostId === e.id ? ' ghost' : '';
+          return h('div', { class: 'ledger-row' + ghost,
+              onClick: () => openEditModal(e.id),
+              role: 'button', tabindex: '0' },
+            h('span', { class: 'dot', style: { background: cat.color } }),
+            h('div', { class: 'body' },
+              h('div', { class: 'label' }, e.label),
+              h('div', { class: 'cat-inline' }, MONTH_NAMES[state.month] + ' ' + e.day + ord(e.day)),
+            ),
+            h('div', { class: 'amt' }, '$' + e.amount),
+            h('button', { class: 'x',
+              onClick: (ev) => { ev.stopPropagation(); removeExpense(e.id); } }, '×'),
+          );
         }),
-      ),
-      h('div', { class: 'field-label' }, 'Category'),
-      h('div', { class: 'cat-chips' }, ...enabledCats.map(c => {
-        const active = c.key === ui.modalCat;
-        return h('button', {
-          class: 'cat-chip',
-          style: {
-            border: `1px solid ${active ? c.color : 'var(--rule)'}`,
-            background: active ? c.color + '22' : 'transparent',
-          },
-          onClick: () => { ui.modalCat = c.key; render(); setTimeout(() => document.querySelector('.modal input[type="number"]')?.focus(), 0); },
-        },
-          h('span', { class: 'chip-dot', style: { background: c.color } }),
-          c.label,
-        );
-      })),
-      h('div', { class: 'note-day-row' },
-        h('div', {},
-          h('div', { class: 'field-label' }, 'Note'),
-          h('input', {
-            type: 'text', placeholder: 'optional', value: ui.modalLabel,
-            onInput: (ev) => { ui.modalLabel = ev.target.value; },
-            onKeydown: (ev) => { if (ev.key === 'Enter') submitAdd(); if (ev.key === 'Escape') closeAddModal(); },
-          }),
-        ),
-        h('div', {},
-          h('div', { class: 'field-label' }, 'Day'),
-          h('input', {
-            type: 'number', min: '1', max: String(d.dim), value: String(ui.modalDay),
-            onInput: (ev) => { ui.modalDay = parseInt(ev.target.value, 10) || 1; },
-            onKeydown: (ev) => { if (ev.key === 'Enter') submitAdd(); if (ev.key === 'Escape') closeAddModal(); },
-          }),
+        h('div', { class: 'ledger-total' },
+          h('div', { class: 'lbl' }, 'Total'),
+          h('div', { class: 'sum' }, '$' + Math.round(total)),
         ),
       ),
-      h('div', { class: 'modal-actions' },
-        h('button', { class: 'btn-cancel', onClick: closeAddModal }, 'Cancel'),
-        h('button', { class: 'btn-add', onClick: submitAdd, disabled: !(parseFloat(ui.modalAmount) > 0) }, 'Add'),
+    );
+  }
+
+  // ============================================================
+  // SETTINGS
+  // ============================================================
+  function renderSettings(d) {
+    return h('main', { class: 'shell settings' },
+      h('button', { class: 'back-link', onClick: () => { state.route = 'daily'; render(); } },
+        h('span', { innerHTML: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>' }),
+        'Back'),
+      h('div', { class: 'settings-head' },
+        h('div', { class: 'settings-kicker' }, 'a few preferences'),
+        h('h1', { class: 'settings-headline' }, 'Settings'),
       ),
-    ),
-  );
-}
-
-// =============================================================
-// Actions
-// =============================================================
-
-function deleteExpense(id) {
-  state.expenses = state.expenses.filter(e => e.id !== id);
-  ui.editingDayRowId = null;
-  render();
-}
-
-function toggleClosedDay() {
-  toggleClosedFor(state.selectedDay);
-}
-
-function toggleClosedFor(day) {
-  const has = state.closedDays.includes(day);
-  state.closedDays = has
-    ? state.closedDays.filter(d => d !== day)
-    : [...state.closedDays, day].sort((a, b) => a - b);
-  render();
-}
-
-function prevMonth() {
-  if (state.month === 0) { state.month = 11; state.year -= 1; } else { state.month -= 1; }
-  // Clamp selectedDay to new month length
-  const dim = daysInMonth(state.year, state.month);
-  state.selectedDay = Math.min(state.selectedDay, dim);
-  state.closedDays = []; // closed-day list is per-month; reset when navigating
-  render();
-}
-
-function nextMonth() {
-  if (state.month === 11) { state.month = 0; state.year += 1; } else { state.month += 1; }
-  const dim = daysInMonth(state.year, state.month);
-  state.selectedDay = Math.min(state.selectedDay, dim);
-  state.closedDays = [];
-  render();
-}
-
-function toggleDark() {
-  state.darkMode = !state.darkMode;
-  render();
-}
-
-// =============================================================
-// Settings actions
-// =============================================================
-
-function setRoute(route) {
-  state.route = route;
-  // Close any in-progress edits when leaving the dashboard
-  if (route !== 'dashboard') {
-    ui.editingDayRowId = null;
-    ui.modalOpen = false;
+      h('section', { class: 'set-section' },
+        h('div', { class: 'head' }, 'Profile'),
+        h('div', { class: 'set-row set-row-input' },
+          h('div', {},
+            h('div', { class: 'title' }, 'Your name'),
+            h('div', { class: 'desc' }, 'Used for the greeting on your home page. Leave blank to hide it.'),
+          ),
+          h('input', { class: 'name-input', type: 'text',
+            placeholder: 'optional',
+            value: state.userName || '',
+            onInput: ev => { state.userName = ev.target.value; },
+            onBlur: () => render() }),
+        ),
+      ),
+      h('section', { class: 'set-section' },
+        h('div', { class: 'head' }, 'Appearance'),
+        h('div', { class: 'set-row' },
+          h('div', {},
+            h('div', { class: 'title' }, 'Dark mode'),
+            h('div', { class: 'desc' }, 'A warmer, dimmer canvas for the evening.'),
+          ),
+          h('button', { class: 'toggle toggle-big' + (state.darkMode ? ' on' : ''),
+            onClick: () => { state.darkMode = !state.darkMode; render(); },
+            'aria-label': 'Toggle dark mode' },
+            h('div', { class: 'toggle-knob' }),
+          ),
+        ),
+      ),
+      h('section', { class: 'set-section' },
+        h('div', { class: 'head' }, 'Categories'),
+        ...state.categories.map(c => h('div', { class: 'set-cat-row' + (c.enabled ? '' : ' disabled') },
+          h('button', { class: 'swatch', style: { background: c.color },
+            'aria-label': 'Color: ' + c.color }),
+          h('input', { class: 'label-input', type: 'text', value: c.label,
+            onInput: ev => { c.label = ev.target.value; },
+            onBlur: () => render() }),
+          h('button', { class: 'toggle' + (c.enabled ? ' on' : ''),
+            onClick: () => { c.enabled = !c.enabled; render(); },
+            'aria-label': 'Enable ' + c.label },
+            h('div', { class: 'toggle-knob' }),
+          ),
+        )),
+      ),
+    );
   }
-  if (route !== 'settings') {
-    ui.openColorPickerKey = null;
+
+  // ============================================================
+  // FAB + MODAL
+  // ============================================================
+  function renderFab() {
+    return h('div', { class: 'fab-wrap' },
+      h('button', { class: 'fab-pill', onClick: openAddModal },
+        h('span', { class: 'plus' }, '+'), 'Log expense',
+      ),
+    );
   }
-  render();
-}
 
-function addCategory(name) {
-  const trimmed = (name || '').trim();
-  if (!trimmed) return;
-  const used = new Set(state.categories.map(c => c.color));
-  const color = PALETTE_POOL.find(c => !used.has(c)) || PALETTE_POOL[state.categories.length % PALETTE_POOL.length];
-  const slug = trimmed.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'cat';
-  const key = slug + '-' + Math.random().toString(36).slice(2, 5);
-  state.categories.push({ key, label: trimmed, color, budget: 50, enabled: true });
-  render();
-}
-
-function updateCategory(key, patch) {
-  const c = state.categories.find(c => c.key === key);
-  if (!c) return;
-  Object.assign(c, patch);
-  render();
-}
-
-function removeCategory(key) {
-  state.categories = state.categories.filter(c => c.key !== key);
-  // Note: orphan expenses (those whose .cat no longer matches any category)
-  // stay in state.expenses but won't render until reassigned. That's intentional —
-  // deleting a category shouldn't silently nuke the user's spend history.
-  if (ui.openColorPickerKey === key) ui.openColorPickerKey = null;
-  render();
-}
-
-function setBudgetsEnabled(on) {
-  state.budgetsEnabled = !!on;
-  render();
-}
-
-function setMonthlyCap(n) {
-  state.monthlyCap = Math.max(0, parseInt(n, 10) || 0);
-  render();
-}
-
-// Close every untracked past day in the current month (≤ today).
-// Days that already have expenses are skipped; days already closed are skipped.
-function closeGaps() {
-  const isCur = state.year === TODAY.year && state.month === TODAY.month;
-  const dim = daysInMonth(state.year, state.month);
-  const refDay = isCur ? TODAY.day : dim;
-  const enabledKeys = new Set(state.categories.filter(c => c.enabled).map(c => c.key));
-  const byDay = expensesByDay(state.expenses, enabledKeys);
-  const toClose = [];
-  for (let d = 1; d <= refDay; d++) {
-    if (!byDay[d] && !state.closedDays.includes(d)) toClose.push(d);
+  function renderModal(d) {
+    const enabledCats = state.categories.filter(c => c.enabled);
+    const isEdit = ui.modalEditId != null;
+    const submit = isEdit ? submitEdit : submitAdd;
+    return h('div', { class: 'modal-backdrop', onClick: closeModal },
+      h('div', { class: 'modal', onClick: ev => ev.stopPropagation() },
+        h('div', { class: 'modal-kicker' }, isEdit ? 'Edit expense' : 'New expense'),
+        h('div', { class: 'amount-input-wrap' },
+          h('span', { class: 'currency' }, '$'),
+          h('input', { type: 'number', step: '0.01', placeholder: '0', inputmode: 'decimal',
+            value: ui.modalAmount,
+            onInput: ev => { ui.modalAmount = ev.target.value; },
+            onKeydown: ev => { if (ev.key === 'Enter') submit(); if (ev.key === 'Escape') closeModal(); } }),
+        ),
+        h('div', { class: 'field-label' }, 'Category'),
+        h('div', { class: 'cat-chips' }, ...enabledCats.map(c => {
+          const active = c.key === ui.modalCat;
+          return h('button', { class: 'cat-chip' + (active ? ' active' : ''),
+            style: active ? { background: c.color + '14' } : {},
+            onClick: () => { ui.modalCat = c.key; render();
+              setTimeout(() => document.querySelector('.amount-input-wrap input')?.focus(), 0); } },
+            h('span', { class: 'chip-dot', style: { background: c.color } }), c.label);
+        })),
+        h('div', { class: 'note-day-row' },
+          h('div', {},
+            h('div', { class: 'field-label' }, 'Note'),
+            h('input', { type: 'text', placeholder: 'optional', value: ui.modalLabel,
+              onInput: ev => { ui.modalLabel = ev.target.value; },
+              onKeydown: ev => { if (ev.key === 'Enter') submit(); if (ev.key === 'Escape') closeModal(); } }),
+          ),
+          h('div', {},
+            h('div', { class: 'field-label' }, 'Day'),
+            h('input', { type: 'number', min: '1', max: String(d.dim), value: String(ui.modalDay),
+              onInput: ev => { ui.modalDay = parseInt(ev.target.value, 10) || 1; },
+              onKeydown: ev => { if (ev.key === 'Enter') submit(); if (ev.key === 'Escape') closeModal(); } }),
+          ),
+        ),
+        h('div', { class: 'modal-actions' },
+          isEdit ? h('button', { class: 'btn-delete', onClick: deleteFromModal }, 'Delete') : null,
+          h('div', { class: 'right' },
+            h('button', { class: 'btn-cancel', onClick: closeModal }, 'Cancel'),
+            h('button', { class: 'btn-add', onClick: submit, disabled: !(parseFloat(ui.modalAmount) > 0) },
+              isEdit ? 'Save' : 'Add'),
+          ),
+        ),
+      ),
+    );
   }
-  state.closedDays = [...new Set([...state.closedDays, ...toClose])].sort((a, b) => a - b);
-  render();
-}
 
-// Global Esc: close modal first, otherwise dismiss color picker, otherwise leave Settings
-document.addEventListener('keydown', (ev) => {
-  if (ev.key !== 'Escape') return;
-  if (ui.modalOpen) { closeAddModal(); return; }
-  if (ui.openColorPickerKey) { ui.openColorPickerKey = null; render(); return; }
-  if (state.route === 'settings') setRoute('dashboard');
-});
+  // ============================================================
+  // ANIMATION: count-up the hero number after each render
+  // ============================================================
+  function animateHeroNum() {
+    const el = document.querySelector('.figure-amount .num[data-target]');
+    if (!el) return;
+    const target = parseInt(el.getAttribute('data-target'), 10) || 0;
+    const start = ui.prevHeroNum;
+    if (start === target) {
+      el.textContent = String(target);
+      ui.prevHeroNum = target;
+      return;
+    }
+    const dur = 520;
+    const t0 = performance.now();
+    function tick(now) {
+      const t = Math.min(1, (now - t0) / dur);
+      // ease out cubic
+      const e = 1 - Math.pow(1 - t, 3);
+      const v = Math.round(start + (target - start) * e);
+      el.textContent = String(v);
+      if (t < 1) requestAnimationFrame(tick);
+      else {
+        el.textContent = String(target);
+        el.classList.remove('settled'); void el.offsetWidth;
+        el.classList.add('settled');
+        ui.prevHeroNum = target;
+      }
+    }
+    requestAnimationFrame(tick);
+  }
 
-// =============================================================
-// PWA service worker
-// =============================================================
+  // ============================================================
+  // ACTIONS
+  // ============================================================
+  function stepDay(delta) {
+    const dim_ = dim(state.year, state.month);
+    let d = state.selectedDay + delta;
+    if (d < 1) {
+      if (state.month === 0) { state.month = 11; state.year -= 1; }
+      else state.month -= 1;
+      d = dim(state.year, state.month);
+    } else if (d > dim_) {
+      if (state.month === 11) { state.month = 0; state.year += 1; }
+      else state.month += 1;
+      d = 1;
+    }
+    state.selectedDay = d; render();
+  }
+  function stepMonth(delta) {
+    let m = state.month + delta, y = state.year;
+    if (m < 0) { m = 11; y -= 1; }
+    else if (m > 11) { m = 0; y += 1; }
+    state.month = m; state.year = y;
+    const dim_ = dim(y, m);
+    if (state.selectedDay > dim_) state.selectedDay = dim_;
+    render();
+  }
+  function removeExpense(id) {
+    state.expenses = state.expenses.filter(e => e.id !== id);
+    render();
+  }
+  function toggleClosedFor(day) {
+    const has = state.closedDays.includes(day);
+    state.closedDays = has ? state.closedDays.filter(x => x !== day)
+                           : [...state.closedDays, day].sort((a,b) => a - b);
+    render();
+  }
 
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('service-worker.js').catch(() => {});
+  function openAddModal() {
+    ui.modalOpen = true; ui.modalEditId = null;
+    ui.modalDay = state.selectedDay; ui.modalAmount = ''; ui.modalLabel = '';
+    ui.modalCat = state.categories.find(c => c.enabled)?.key || 'food';
+    render();
+    setTimeout(() => document.querySelector('.amount-input-wrap input')?.focus(), 60);
+  }
+  function openEditModal(id) {
+    const e = state.expenses.find(x => x.id === id);
+    if (!e) return;
+    ui.modalOpen = true; ui.modalEditId = id;
+    ui.modalDay = e.day;
+    ui.modalAmount = String(e.amount);
+    ui.modalLabel = e.label;
+    ui.modalCat = e.cat;
+    render();
+    setTimeout(() => document.querySelector('.amount-input-wrap input')?.focus(), 60);
+  }
+  function closeModal() { ui.modalOpen = false; ui.modalEditId = null; render(); }
+  function submitAdd() {
+    const n = parseFloat(ui.modalAmount);
+    if (!n || n <= 0) return;
+    const catObj = state.categories.find(c => c.key === ui.modalCat);
+    const id = 'e' + Math.random().toString(36).slice(2, 8);
+    state.expenses.unshift({
+      id, day: ui.modalDay, cat: ui.modalCat,
+      label: (ui.modalLabel || '').trim() || (catObj?.label.toLowerCase() || 'expense'),
+      amount: n,
+    });
+    state.selectedDay = ui.modalDay; state.route = 'daily';
+    ui.ghostId = id; ui.modalOpen = false; ui.modalEditId = null;
+    render();
+    setTimeout(() => { ui.ghostId = null; render(); }, 800);
+  }
+  function submitEdit() {
+    const n = parseFloat(ui.modalAmount);
+    if (!n || n <= 0) return;
+    const e = state.expenses.find(x => x.id === ui.modalEditId);
+    if (!e) { closeModal(); return; }
+    const catObj = state.categories.find(c => c.key === ui.modalCat);
+    e.amount = n; e.cat = ui.modalCat; e.day = ui.modalDay;
+    e.label = (ui.modalLabel || '').trim() || (catObj?.label.toLowerCase() || 'expense');
+    state.selectedDay = ui.modalDay;
+    ui.ghostId = e.id; ui.modalOpen = false; ui.modalEditId = null;
+    render();
+    setTimeout(() => { ui.ghostId = null; render(); }, 800);
+  }
+  function deleteFromModal() {
+    if (!ui.modalEditId) return;
+    state.expenses = state.expenses.filter(e => e.id !== ui.modalEditId);
+    ui.modalOpen = false; ui.modalEditId = null;
+    render();
+  }
+
+  // wrap render to also kick off the count-up
+  const _origRender = render;
+  render = function() {
+    _origRender();
+    if (state.route === 'daily') {
+      // run count-up after layout is in
+      requestAnimationFrame(animateHeroNum);
+    }
+  };
+
+  // ============================================================
+  // KEYBOARD + SCROLL
+  // ============================================================
+  document.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') {
+      if (ui.modalOpen) closeModal();
+      else if (state.route === 'settings' || state.route === 'cat-detail') {
+        state.route = (state.route === 'cat-detail') ? 'monthly' : 'daily';
+        render();
+      }
+      return;
+    }
+    if (ui.modalOpen) return;
+    if (ev.key === 'ArrowLeft') {
+      if (state.route === 'daily') stepDay(-1);
+      else if (state.route === 'monthly') stepMonth(-1);
+    } else if (ev.key === 'ArrowRight') {
+      if (state.route === 'daily') stepDay(1);
+      else if (state.route === 'monthly') stepMonth(1);
+    } else if (ev.key === 'n' || ev.key === 'N') openAddModal();
   });
-}
 
-// =============================================================
-// Boot
-// =============================================================
+  window.addEventListener('scroll', () => {
+    const s = window.scrollY > 4;
+    if (s !== ui.scrolled) {
+      ui.scrolled = s;
+      const tb = document.querySelector('.topbar');
+      if (tb) tb.classList.toggle('scrolled', s);
+    }
+  });
 
-render();
+  render();
 </script>
 </body>
 </html>
