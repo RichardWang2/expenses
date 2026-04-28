@@ -1,6 +1,7 @@
 .playwright-mcp/
 .DS_Store
 node_modules/
+.claude/worktrees/
 
 # dev screenshots
 ledger-*.png
