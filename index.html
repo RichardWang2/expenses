@@ -1160,7 +1160,6 @@
       { key: 'home',    label: 'Home',     color: '#5a7a4a', budget: 320, enabled: true },
       { key: 'health',  label: 'Health',   color: '#8b7548', budget: 180, enabled: true },
     ],
-    history: [62, 41, 88, 30, 55, 72, 87],
     expenses: [
       { id: 'e1', day: 27, cat: 'food',    label: 'morning espresso',     amount: 6 },
       { id: 'e2', day: 27, cat: 'food',    label: 'tortelli, that place', amount: 38 },
@@ -1204,7 +1203,7 @@
   const STORAGE_KEY = 'lumen.state.v1';
   const PERSIST_KEYS = [
     'expenses', 'categories', 'monthlyBudget', 'darkMode',
-    'budgetsEnabled', 'userName', 'closedDays', 'history',
+    'budgetsEnabled', 'userName', 'closedDays',
   ];
   function saveState() {
     try {
@@ -1310,12 +1309,26 @@
       .map(c => ({ ...c, ...byCatMonth[c.key] }))
       .sort((a, b) => b.amount - a.amount);
 
+    // 7-day spend series ending on the selected day, clamped to month start.
+    // Closed days contribute their phantom daily-budget amount, matching the
+    // rest of the app's accounting.
+    const sparkEnd = state.selectedDay;
+    const sparkStart = Math.max(1, sparkEnd - 6);
+    const sparkSeries = [];
+    for (let day = sparkStart; day <= sparkEnd; day++) {
+      const v = closedSet.has(day)
+        ? dailyBudget
+        : (byDay[day] || []).reduce((a, b) => a + b.amount, 0);
+      sparkSeries.push(v);
+    }
+
     return {
       catByKey, byDay, dim: dim_,
       dayExp, daySpent, dailyBudget, remaining, overToday, dayClosed,
       monthSpent, pace, isCurrentMonth, dayForPace,
       catList,
       closedSet, closedCount, closedSpend,
+      sparkSeries,
       isToday: state.selectedDay === TODAY.day && isCurrentMonth,
     };
   }
@@ -1403,10 +1416,17 @@
     );
   }
 
-  function renderMiniSpark() {
-    const data = state.history.slice();
+  function renderMiniSpark(d) {
+    const data = d.sparkSeries;
     const W = 88, H = 26, P = 3;
-    const max = Math.max(...data) * 1.1;
+    if (data.length < 2) {
+      // Not enough days yet (e.g. day 1 of month) — render an empty frame.
+      return h('div', { class: 'mini-spark' },
+        h('div', { class: 'lbl' }, data.length + 'd'),
+        h('div', { innerHTML: `<svg viewBox="0 0 ${W} ${H}"></svg>` }),
+      );
+    }
+    const max = Math.max(...data, 1) * 1.1; // avoid div-by-zero when all zeros
     const stepX = (W - P * 2) / (data.length - 1);
     const points = data.map((v, i) => {
       const x = P + i * stepX;
@@ -1419,7 +1439,7 @@
     const baseY = P + (H-P*2)*(1 - avg/max);
 
     return h('div', { class: 'mini-spark' },
-      h('div', { class: 'lbl' }, '7d'),
+      h('div', { class: 'lbl' }, data.length + 'd'),
       h('div', { innerHTML: `
         <svg viewBox="0 0 ${W} ${H}" preserveAspectRatio="none">
           <line class="ms-baseline" x1="${P}" y1="${baseY.toFixed(1)}" x2="${W-P}" y2="${baseY.toFixed(1)}" />
@@ -1434,9 +1454,10 @@
     const remainingAbs = Math.abs(Math.round(d.remaining));
     const overClass = d.overToday ? ' over' : '';
 
-    const today = state.history[state.history.length - 1];
-    const avg = Math.round(state.history.reduce((a,b)=>a+b,0) / state.history.length);
-    const vsAvg = today - avg;
+    const series = d.sparkSeries;
+    const todayVal = series[series.length - 1] || 0;
+    const avg = series.length ? Math.round(series.reduce((a,b)=>a+b,0) / series.length) : 0;
+    const vsAvg = Math.round(todayVal - avg);
     let paceCopy;
     if (Math.abs(d.pace) < 5) {
       paceCopy = h('span', {}, 'You\'re ',
@@ -1465,7 +1486,7 @@
             h('span', { class: 'ord' }, ord(state.selectedDay)),
           ),
         ),
-        renderMiniSpark(),
+        renderMiniSpark(d),
       ),
       h('div', { class: 'figure-block' + (d.dayClosed ? ' closed' : '') },
         h('div', { class: 'figure-label' },
@@ -1483,10 +1504,6 @@
   function renderLedger(d) {
     const hasExp = d.dayExp.length > 0;
     return h('section', { class: 'ledger-section' },
-      h('div', { class: 'ledger-head' },
-        h('h2', { class: 'ttl' }, 'The ledger'),
-        h('div', { class: 'meta' }, d.dayExp.length + (d.dayExp.length === 1 ? ' entry' : ' entries')),
-      ),
       hasExp
         ? h('div', {},
             ...d.dayExp.map(e => {
