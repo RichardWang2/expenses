@@ -563,6 +563,13 @@
   }
   .cal-cell.future .cell-num { color: var(--ink-faint); }
   .cal-cell.future .cell-btn { border-style: dashed; border-color: var(--rule); }
+  .cal-cell.closed:not(.selected) .cell-btn {
+    background: var(--bg-soft);
+    border-style: dashed;
+    border-color: var(--rule-strong);
+  }
+  .cal-cell.closed .cell-num { text-decoration: line-through; color: var(--ink-faint); }
+  .cal-cell.closed .cell-amt { color: var(--ink-soft); font-style: italic; }
 
   /* ---------- by-category section ---------- */
   .cat-section {
@@ -808,10 +815,32 @@
   .set-row .toggle-big.on .toggle-knob { transform: translateX(16px); }
 
   .set-cat-row {
-    display: grid; grid-template-columns: 16px 1fr 36px;
+    display: grid; grid-template-columns: 16px 1fr auto;
     gap: 12px; align-items: center;
     padding: 12px 0; border-top: 1px solid var(--rule);
   }
+  .cat-row-actions { display: flex; align-items: center; gap: 10px; }
+  .cat-del {
+    width: 24px; height: 24px;
+    font: 400 18px/1 var(--font-display);
+    color: var(--ink-faint);
+    border-radius: 99px;
+    display: flex; align-items: center; justify-content: center;
+    transition: color 150ms, background 150ms;
+  }
+  .cat-del:hover { color: var(--over); }
+  .cat-del:active { background: var(--over); color: var(--paper); }
+  .cat-add {
+    margin-top: 14px;
+    display: inline-flex; align-items: center; gap: 8px;
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+    padding: 6px 0;
+    transition: color 150ms;
+  }
+  .cat-add:hover { color: var(--ink); }
+  .cat-add .plus { font: 400 16px/1 var(--font-display); color: var(--ink-soft); }
+  .cat-add:hover .plus { color: var(--ink); }
   .set-cat-row:last-child { border-bottom: 1px solid var(--rule); }
   .set-cat-row.disabled { opacity: 0.4; }
   .set-cat-row .swatch {
@@ -1195,6 +1224,11 @@
       for (const k of PERSIST_KEYS) {
         if (k in saved) state[k] = saved[k];
       }
+      // Migrate legacy closedDays (plain day numbers, no month/year context)
+      // to the new 'Y-M-D' string format by dropping the ambiguous entries.
+      if (Array.isArray(state.closedDays) && state.closedDays.some(x => typeof x !== 'string')) {
+        state.closedDays = state.closedDays.filter(x => typeof x === 'string');
+      }
     } catch (e) {
       // corrupt payload — ignore and keep defaults
     }
@@ -1213,6 +1247,15 @@
   // ============================================================
   function dim(year, month) { return new Date(year, month + 1, 0).getDate(); }
 
+  // Closed-day key helpers: 'Y-M-D' strings scoped to year+month+day so closing
+  // a day in April doesn't also appear closed when navigating to March.
+  function closedKey(year, month, day) { return year + '-' + (month + 1) + '-' + day; }
+  function parseClosedKey(k) {
+    const m = String(k).match(/^(\d+)-(\d+)-(\d+)$/);
+    if (!m) return null;
+    return { year: +m[1], month: +m[2] - 1, day: +m[3] };
+  }
+
   function compute() {
     const catByKey = Object.fromEntries(state.categories.map(c => [c.key, c]));
     const byDay = {};
@@ -1222,9 +1265,24 @@
     const dayExp = byDay[D] || [];
     const daySpent = dayExp.reduce((a, b) => a + b.amount, 0);
     const dim_ = dim(state.year, state.month);
-    const dailyBudget = state.monthlyBudget / dim_;
+
+    // Build the set of closed days that fall in the currently-viewed month.
+    const closedSet = new Set();
+    for (const k of (state.closedDays || [])) {
+      const p = parseClosedKey(k);
+      if (!p) continue;
+      if (p.year === state.year && p.month === state.month && p.day >= 1 && p.day <= dim_) {
+        closedSet.add(p.day);
+      }
+    }
+    const closedCount = closedSet.size;
+    const dailyBudgetBase = state.monthlyBudget / dim_;
+    const effectiveMonthlyBudget = state.monthlyBudget - dailyBudgetBase * closedCount;
+    const openDayCount = Math.max(1, dim_ - closedCount);
+    const dailyBudget = effectiveMonthlyBudget / openDayCount;
+    const dayClosed = closedSet.has(D);
     const remaining = dailyBudget - daySpent;
-    const overToday = remaining < 0;
+    const overToday = remaining < 0 && !dayClosed;
 
     const monthSpent = state.expenses.reduce((a, b) => a + b.amount, 0);
     const isCurrentMonth = state.year === TODAY.year && state.month === TODAY.month;
@@ -1245,9 +1303,10 @@
 
     return {
       catByKey, byDay, dim: dim_,
-      dayExp, daySpent, dailyBudget, remaining, overToday,
+      dayExp, daySpent, dailyBudget, dailyBudgetBase, remaining, overToday, dayClosed,
       monthSpent, pace, isCurrentMonth, dayForPace,
       catList,
+      closedSet, closedCount, openDayCount, effectiveMonthlyBudget,
       isToday: state.selectedDay === TODAY.day && isCurrentMonth,
     };
   }
@@ -1399,8 +1458,10 @@
         ),
         renderMiniSpark(),
       ),
-      h('div', { class: 'figure-block' },
-        h('div', { class: 'figure-label' }, d.overToday ? 'Over today by' : 'Left to spend today'),
+      h('div', { class: 'figure-block' + (d.dayClosed ? ' closed' : '') },
+        h('div', { class: 'figure-label' },
+          d.dayClosed ? 'Day closed'
+            : (d.overToday ? 'Over today by' : 'Left to spend today')),
         h('div', { class: 'figure-amount' + overClass },
           h('span', { class: 'currency' }, d.overToday ? '−$' : '$'),
           numEl,
@@ -1443,9 +1504,9 @@
         h('div', { class: 'sum' }, '$' + Math.round(d.daySpent)),
       ),
       h('div', { class: 'close-row' },
-        h('button', { class: 'ghost-pill' + (state.closedDays.includes(state.selectedDay) ? ' active' : ''),
+        h('button', { class: 'ghost-pill' + (d.dayClosed ? ' active' : ''),
           onClick: () => toggleClosedFor(state.selectedDay) },
-          state.closedDays.includes(state.selectedDay) ? 'Reopen day' : 'Close day'),
+          d.dayClosed ? 'Reopen day' : 'Close day'),
       ),
     );
   }
@@ -1480,12 +1541,17 @@
   }
 
   function renderMonthHero(d) {
-    const remaining = state.monthlyBudget - d.monthSpent;
+    const effBudget = Math.round(d.effectiveMonthlyBudget);
+    const remaining = d.effectiveMonthlyBudget - d.monthSpent;
     const isOver = remaining < 0;
     let paceVal, paceClass = 'muted', paceSub;
     if (Math.abs(d.pace) < 10) { paceVal = 'On track'; paceSub = 'Pacing well'; }
     else if (d.pace > 0) { paceVal = '+$' + Math.round(d.pace); paceClass = 'over'; paceSub = 'Over pace'; }
     else { paceVal = '−$' + Math.round(-d.pace); paceClass = 'under'; paceSub = 'Under pace'; }
+
+    const budgetSub = d.closedCount > 0
+      ? 'of $' + effBudget + ' · ' + d.closedCount + ' closed'
+      : 'of $' + state.monthlyBudget;
 
     return h('section', {},
       h('div', { class: 'month-headline-wrap' },
@@ -1496,7 +1562,7 @@
         h('div', { class: 'cell' },
           h('div', { class: 'lbl' }, 'Spent'),
           h('div', { class: 'val' }, '$' + Math.round(d.monthSpent)),
-          h('div', { class: 'sub' }, 'of $' + state.monthlyBudget),
+          h('div', { class: 'sub' }, budgetSub),
         ),
         h('div', { class: 'cell' },
           h('div', { class: 'lbl' }, isOver ? 'Over by' : 'Left'),
@@ -1634,15 +1700,17 @@
     const isToday = d.isCurrentMonth && day === TODAY.day;
     const isSel = day === state.selectedDay;
     const isFuture = d.isCurrentMonth && day > TODAY.day;
+    const isClosed = d.closedSet.has(day);
 
     const cls = ['cal-cell'];
     if (isToday) cls.push('today');
     if (isSel) cls.push('selected');
     if (isFuture) cls.push('future');
+    if (isClosed) cls.push('closed');
 
     // budget-based tint: green if under, red if over, neutral if no spend
     let bgColor = '';
-    if (!isSel && !isFuture && total > 0) {
+    if (!isSel && !isFuture && !isClosed && total > 0) {
       const ratio = total / d.dailyBudget; // >1 = over
       if (ratio > 1) {
         // over — red, intensity by how much over (cap at 2x)
@@ -1959,12 +2027,18 @@
           h('input', { class: 'label-input', type: 'text', value: c.label,
             onInput: ev => { c.label = ev.target.value; },
             onBlur: () => render() }),
-          h('button', { class: 'toggle' + (c.enabled ? ' on' : ''),
-            onClick: () => { c.enabled = !c.enabled; render(); },
-            'aria-label': 'Enable ' + c.label },
-            h('div', { class: 'toggle-knob' }),
+          h('div', { class: 'cat-row-actions' },
+            h('button', { class: 'toggle' + (c.enabled ? ' on' : ''),
+              onClick: () => { c.enabled = !c.enabled; render(); },
+              'aria-label': 'Enable ' + c.label },
+              h('div', { class: 'toggle-knob' }),
+            ),
+            h('button', { class: 'cat-del', onClick: () => removeCategory(c.key),
+              'aria-label': 'Delete ' + c.label }, '×'),
           ),
         )),
+        h('button', { class: 'cat-add', onClick: addCategory },
+          h('span', { class: 'plus' }, '+'), 'Add category'),
       ),
       h('section', { class: 'set-section' },
         h('div', { class: 'head' }, 'Data'),
@@ -2101,6 +2175,35 @@
     state.expenses = state.expenses.filter(e => e.id !== id);
     render();
   }
+  const NEW_CAT_COLORS = [
+    '#c9824a', '#5e7a8c', '#7a6b94', '#a8556e', '#5a7a4a', '#8b7548',
+    '#b3835f', '#6c8b91', '#9a7a5a', '#7e6a87',
+  ];
+  function addCategory() {
+    const used = new Set(state.categories.map(c => (c.color || '').toLowerCase()));
+    const color = NEW_CAT_COLORS.find(c => !used.has(c.toLowerCase()))
+      || NEW_CAT_COLORS[state.categories.length % NEW_CAT_COLORS.length];
+    let key = 'cat-' + Date.now();
+    while (state.categories.some(c => c.key === key)) key += '-' + Math.floor(Math.random() * 1000);
+    state.categories.push({ key, label: 'New category', color, budget: 0, enabled: true });
+    render();
+  }
+  function removeCategory(key) {
+    const cat = state.categories.find(c => c.key === key);
+    if (!cat) return;
+    const orphans = state.expenses.filter(e => e.cat === key).length;
+    let msg = 'Delete category "' + cat.label + '"?';
+    if (orphans > 0) {
+      msg += '\n\n' + orphans + ' expense' + (orphans === 1 ? '' : 's') + ' in this category will also be removed.';
+    }
+    if (!confirm(msg)) return;
+    state.categories = state.categories.filter(c => c.key !== key);
+    state.expenses = state.expenses.filter(e => e.cat !== key);
+    if (ui.modalCat === key) ui.modalCat = state.categories[0]?.key || null;
+    if (state.viewCat === key) { state.viewCat = null; if (state.route === 'cat-detail') state.route = 'monthly'; }
+    render();
+  }
+
   function clearAllData() {
     const ok = confirm('Clear all data?\n\nThis removes every expense and resets your monthly budget to the default.');
     if (!ok) return;
@@ -2115,9 +2218,10 @@
     render();
   }
   function toggleClosedFor(day) {
-    const has = state.closedDays.includes(day);
-    state.closedDays = has ? state.closedDays.filter(x => x !== day)
-                           : [...state.closedDays, day].sort((a,b) => a - b);
+    const k = closedKey(state.year, state.month, day);
+    const list = (state.closedDays || []).filter(x => typeof x === 'string');
+    const has = list.includes(k);
+    state.closedDays = has ? list.filter(x => x !== k) : [...list, k];
     render();
   }
 
