@@ -867,6 +867,18 @@
   .name-input:focus { border-bottom-color: var(--ink); }
   .name-input::placeholder { color: var(--ink-faint); font-style: italic; }
 
+  .btn-clear {
+    color: var(--over);
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    transition: background 150ms, border-color 150ms, color 150ms;
+  }
+  .btn-clear:hover { border-color: var(--over-soft); }
+  .btn-clear:active { background: var(--over); color: var(--paper); border-color: var(--over); }
+
   /* settings: monthly-budget input row */
   .budget-set {
     display: flex; align-items: baseline; gap: 4px;
@@ -1145,6 +1157,29 @@
     closedDays: [],
   };
 
+  // ============================================================
+  // PERSISTENCE
+  // ============================================================
+  const STORAGE_KEY = 'lumen.state.v1';
+  function saveState() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
+    } catch (e) {
+      // quota exceeded or storage disabled — fail silently
+    }
+  }
+  function loadState() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return;
+      const saved = JSON.parse(raw);
+      if (saved && typeof saved === 'object') Object.assign(state, saved);
+    } catch (e) {
+      // corrupt payload — ignore and keep defaults
+    }
+  }
+  loadState();
+
   const ui = {
     modalOpen: false, modalEditId: null,
     modalDay: TODAY.day, modalAmount: '', modalLabel: '', modalCat: 'food',
@@ -1212,6 +1247,7 @@
     else if (state.route === 'settings') root.appendChild(renderSettings(d));
     if (state.route !== 'settings') root.appendChild(renderFab());
     if (ui.modalOpen) root.appendChild(renderModal(d));
+    saveState();
   }
 
   function renderTopbar() {
@@ -1909,6 +1945,16 @@
           ),
         )),
       ),
+      h('section', { class: 'set-section' },
+        h('div', { class: 'head' }, 'Data'),
+        h('div', { class: 'set-row' },
+          h('div', {},
+            h('div', { class: 'title' }, 'Clear all data'),
+            h('div', { class: 'desc' }, 'Permanently removes all expenses and resets settings on this device.'),
+          ),
+          h('button', { class: 'btn-clear', onClick: clearAllData }, 'Clear'),
+        ),
+      ),
     );
   }
 
@@ -2033,6 +2079,12 @@
   function removeExpense(id) {
     state.expenses = state.expenses.filter(e => e.id !== id);
     render();
+  }
+  function clearAllData() {
+    const ok = confirm('Clear all data?\n\nThis permanently removes all expenses and resets settings on this device.');
+    if (!ok) return;
+    try { localStorage.removeItem(STORAGE_KEY); } catch (e) {}
+    location.reload();
   }
   function toggleClosedFor(day) {
     const has = state.closedDays.includes(day);
