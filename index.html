@@ -86,7 +86,7 @@
   .topbar {
     position: sticky; top: 0; background: var(--bg);
     z-index: 20;
-    padding: 14px 22px 10px;
+    padding: calc(14px + env(safe-area-inset-top)) 22px 10px;
     display: flex; justify-content: space-between; align-items: center;
     border-bottom: 1px solid transparent;
     transition: border-color 200ms ease, background 320ms ease;
@@ -908,6 +908,20 @@
   .btn-clear:hover { border-color: var(--over-soft); }
   .btn-clear:active { background: var(--over); color: var(--paper); border-color: var(--over); }
 
+  .btn-secondary {
+    color: var(--ink);
+    font: 500 10px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase;
+    padding: 10px 14px;
+    border: 1px solid var(--rule-strong);
+    border-radius: 999px;
+    transition: background 150ms, border-color 150ms, color 150ms;
+    white-space: nowrap;
+  }
+  .btn-secondary:hover { border-color: var(--ink-soft); }
+  .btn-secondary:active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+  .data-actions { display: flex; flex-wrap: wrap; gap: 8px; }
+
   /* settings: monthly-budget input row */
   .budget-set {
     display: flex; align-items: baseline; gap: 4px;
@@ -936,7 +950,7 @@
   .fab-wrap {
     position: fixed; left: 0; right: 0; bottom: 0;
     display: flex; justify-content: center; pointer-events: none;
-    padding: 0 0 24px; z-index: 30;
+    padding: 0 0 calc(24px + env(safe-area-inset-bottom)); z-index: 30;
   }
   .fab-pill {
     pointer-events: auto;
@@ -959,6 +973,34 @@
   .fab-pill:hover .plus { transform: rotate(90deg); }
 
   /* ============================================ */
+  /* TOAST                                        */
+  /* ============================================ */
+  .toast-wrap {
+    position: fixed; left: 0; right: 0;
+    bottom: calc(86px + env(safe-area-inset-bottom));
+    display: flex; justify-content: center; pointer-events: none;
+    z-index: 40; padding: 0 16px;
+  }
+  .toast {
+    pointer-events: auto;
+    display: inline-flex; align-items: center; gap: 14px;
+    background: var(--ink); color: var(--bg);
+    font: 500 11px var(--font-mono); letter-spacing: 0.06em;
+    padding: 12px 14px 12px 18px; border-radius: 12px;
+    max-width: 100%;
+    box-shadow: 0 12px 28px -10px rgba(28,24,18,0.4),
+                0 4px 10px -3px rgba(28,24,18,0.2);
+    animation: rise 280ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .toast .msg { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .toast .action {
+    color: var(--bg); background: rgba(255,255,255,0.12);
+    border-radius: 8px; padding: 6px 10px;
+    font: 500 10px var(--font-mono); letter-spacing: 0.18em; text-transform: uppercase;
+  }
+  .toast .action:hover { background: rgba(255,255,255,0.2); }
+
+  /* ============================================ */
   /* MODAL                                        */
   /* ============================================ */
   .modal-backdrop {
@@ -977,7 +1019,7 @@
     border-right: 1px solid var(--rule-strong);
     color: var(--ink);
     width: 100%; max-width: 480px;
-    padding: 26px 24px 22px;
+    padding: 26px 24px calc(22px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -20px 60px rgba(28,24,18,0.18);
     animation: rise 320ms cubic-bezier(0.22,1,0.36,1);
@@ -1100,6 +1142,16 @@
 </style>
 </head>
 <body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-chevron-left" viewBox="0 0 24 24"><path d="M15 18l-6-6 6-6"/></symbol>
+    <symbol id="i-chevron-right" viewBox="0 0 24 24"><path d="M9 18l6-6-6-6"/></symbol>
+    <symbol id="i-gear" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="3"/>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+    </symbol>
+  </defs>
+</svg>
 <div id="app"></div>
 
 <script>
@@ -1125,6 +1177,12 @@
       el.appendChild(typeof c === 'string' || typeof c === 'number' ? document.createTextNode(String(c)) : c);
     }
     return el;
+  }
+
+  function icon(name, size = 14, strokeWidth = 1.5) {
+    return h('span', { 'aria-hidden': 'true', innerHTML:
+      `<svg width="${size}" height="${size}" fill="none" stroke="currentColor" stroke-width="${strokeWidth}" stroke-linecap="round" stroke-linejoin="round"><use href="#i-${name}"/></svg>`
+    });
   }
 
   // ============================================================
@@ -1255,6 +1313,12 @@
     }
   }
   loadState();
+  // Migration: stamp every expense with year+month. Pre-migration data was
+  // implicitly bound to the user's current month; assume that's TODAY.
+  for (const e of state.expenses) {
+    if (typeof e.year !== 'number') e.year = TODAY.year;
+    if (typeof e.month !== 'number') e.month = TODAY.month;
+  }
 
   const ui = {
     modalOpen: false, modalEditId: null,
@@ -1279,8 +1343,9 @@
 
   function compute() {
     const catByKey = Object.fromEntries(state.categories.map(c => [c.key, c]));
+    const monthExp = state.expenses.filter(e => e.year === state.year && e.month === state.month);
     const byDay = {};
-    for (const e of state.expenses) (byDay[e.day] = byDay[e.day] || []).push(e);
+    for (const e of monthExp) (byDay[e.day] = byDay[e.day] || []).push(e);
 
     const D = state.selectedDay;
     const dayExp = byDay[D] || [];
@@ -1308,7 +1373,7 @@
     // Effective monthSpent: closed days contribute the daily budget as phantom
     // spend; their actual logged expenses are overridden, never double-counted.
     let openSpent = 0;
-    for (const e of state.expenses) {
+    for (const e of monthExp) {
       if (closedSet.has(e.day)) continue;
       openSpent += e.amount;
     }
@@ -1321,7 +1386,7 @@
     const pastCutoff = isCurrentMonth ? TODAY.day : dim_ + 1;
     const pacePastDays = isCurrentMonth ? Math.max(0, TODAY.day - 1) : dim_;
     let pastOpenSpent = 0;
-    for (const e of state.expenses) {
+    for (const e of monthExp) {
       if (closedSet.has(e.day)) continue;
       if (e.day >= pastCutoff) continue;
       pastOpenSpent += e.amount;
@@ -1336,7 +1401,7 @@
     const dayForPace = isCurrentMonth ? TODAY.day : dim_;
 
     const byCatMonth = {};
-    for (const e of state.expenses) {
+    for (const e of monthExp) {
       if (closedSet.has(e.day)) continue;
       byCatMonth[e.cat] = byCatMonth[e.cat] || { amount: 0, count: 0 };
       byCatMonth[e.cat].amount += e.amount;
@@ -1386,8 +1451,36 @@
     else if (state.route === 'cat-detail') root.appendChild(renderCatDetail(d));
     else if (state.route === 'settings') root.appendChild(renderSettings(d));
     if (state.route !== 'settings') root.appendChild(renderFab());
+    const toast = renderToast();
+    if (toast) root.appendChild(toast);
     if (ui.modalOpen) root.appendChild(renderModal(d));
     saveState();
+  }
+
+  function renderToast() {
+    if (ui.swUpdateReady) {
+      return h('div', { class: 'toast-wrap', role: 'status', 'aria-live': 'polite' },
+        h('div', { class: 'toast' },
+          h('span', { class: 'msg' }, 'New version available'),
+          h('button', { class: 'action', onClick: applySwUpdate }, 'Reload'),
+        ),
+      );
+    }
+    if (ui.undoExpense) {
+      const e = ui.undoExpense.expense;
+      return h('div', { class: 'toast-wrap', role: 'status', 'aria-live': 'polite' },
+        h('div', { class: 'toast' },
+          h('span', { class: 'msg' }, 'Removed ' + (e.label || 'expense')),
+          h('button', { class: 'action', onClick: undoRemove }, 'Undo'),
+        ),
+      );
+    }
+    if (ui.flashMsg) {
+      return h('div', { class: 'toast-wrap', role: 'status', 'aria-live': 'polite' },
+        h('div', { class: 'toast' }, h('span', { class: 'msg' }, ui.flashMsg)),
+      );
+    }
+    return null;
   }
 
   function renderTopbar() {
@@ -1404,7 +1497,7 @@
         ),
         h('button', { class: 'icon-btn', title: 'Settings',
           onClick: () => { state.route = 'settings'; render(); } },
-          h('span', { innerHTML: '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09a1.65 1.65 0 0 0-1-1.51 1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09a1.65 1.65 0 0 0 1.51-1 1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>' })),
+          icon('gear', 16)),
       ),
     );
   }
@@ -1443,10 +1536,8 @@
     return h('div', { class: 'date-strip' },
       h('div', { class: 'month' }, MONTH_NAMES[state.month] + ' ' + state.year),
       h('div', { class: 'day-nav' },
-        h('button', { class: 'chev', onClick: () => stepDay(-1) },
-          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 18l-6-6 6-6"/></svg>' })),
-        h('button', { class: 'chev', onClick: () => stepDay(1) },
-          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>' })),
+        h('button', { class: 'chev', onClick: () => stepDay(-1) }, icon('chevron-left')),
+        h('button', { class: 'chev', onClick: () => stepDay(1) }, icon('chevron-right')),
         !d.isToday && h('button', { class: 'today-jump', onClick: () => {
           state.year = TODAY.year; state.month = TODAY.month; state.selectedDay = TODAY.day; render();
         } }, h('span', { class: 'pulse' }), 'Today'),
@@ -1547,16 +1638,21 @@
             ...d.dayExp.map(e => {
               const cat = d.catByKey[e.cat];
               const ghost = ui.ghostId === e.id ? ' ghost' : '';
+              const catLabel = cat?.label || e.cat;
               return h('div', { class: 'ledger-row' + ghost,
                   onClick: () => openEditModal(e.id),
-                  role: 'button', tabindex: '0' },
+                  onKeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openEditModal(e.id); } },
+                  role: 'button', tabindex: '0',
+                  'data-id': e.id,
+                  'aria-label': '$' + e.amount + ' ' + e.label + ', ' + catLabel + '. Edit expense.' },
                 h('span', { class: 'dot', style: { background: cat?.color || '#888' } }),
                 h('div', { class: 'body' },
                   h('div', { class: 'label' }, e.label),
-                  h('div', { class: 'cat-inline' }, cat?.label || e.cat),
+                  h('div', { class: 'cat-inline' }, catLabel),
                 ),
                 h('div', { class: 'amt' }, '$' + e.amount),
                 h('button', { class: 'x',
+                  'aria-label': 'Delete ' + e.label,
                   onClick: (ev) => { ev.stopPropagation(); removeExpense(e.id); } }, '×'),
               );
             })
@@ -1593,10 +1689,8 @@
     return h('div', { class: 'date-strip' },
       h('div', { class: 'month' }, String(state.year)),
       h('div', { class: 'day-nav' },
-        h('button', { class: 'chev', onClick: () => stepMonth(-1) },
-          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M15 18l-6-6 6-6"/></svg>' })),
-        h('button', { class: 'chev', onClick: () => stepMonth(1) },
-          h('span', { innerHTML: '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 18l6-6-6-6"/></svg>' })),
+        h('button', { class: 'chev', onClick: () => stepMonth(-1) }, icon('chevron-left')),
+        h('button', { class: 'chev', onClick: () => stepMonth(1) }, icon('chevron-right')),
         !isCurrent && h('button', { class: 'today-jump', onClick: () => {
           state.year = TODAY.year; state.month = TODAY.month; render();
         } }, h('span', { class: 'pulse' }), 'Now'),
@@ -1969,7 +2063,8 @@
     if (!cat) { state.route = 'monthly'; render(); return h('div', {}); }
 
     // all expenses in this category for current month
-    const exp = state.expenses.filter(e => e.cat === cat.key);
+    const exp = state.expenses.filter(e =>
+      e.cat === cat.key && e.year === state.year && e.month === state.month);
     const total = exp.reduce((a, b) => a + b.amount, 0);
     const sorted = exp.slice().sort((a, b) => b.day - a.day || b.amount - a.amount);
     const avg = exp.length > 0 ? total / exp.length : 0;
@@ -1977,7 +2072,7 @@
 
     return h('main', { class: 'shell cat-detail' },
       h('button', { class: 'back-link', onClick: () => { state.route = 'monthly'; render(); } },
-        h('span', { innerHTML: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>' }),
+        icon('chevron-left', 12, 2),
         'Back to ' + MONTH_NAMES[state.month]),
       h('div', { class: 'cat-detail-head' },
         h('div', { class: 'cat-detail-kicker' },
@@ -2010,16 +2105,21 @@
         ),
         ...sorted.map(e => {
           const ghost = ui.ghostId === e.id ? ' ghost' : '';
+          const dateLabel = MONTH_NAMES[state.month] + ' ' + e.day + ord(e.day);
           return h('div', { class: 'ledger-row' + ghost,
               onClick: () => openEditModal(e.id),
-              role: 'button', tabindex: '0' },
+              onKeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openEditModal(e.id); } },
+              role: 'button', tabindex: '0',
+              'data-id': e.id,
+              'aria-label': '$' + e.amount + ' ' + e.label + ', ' + dateLabel + '. Edit expense.' },
             h('span', { class: 'dot', style: { background: cat.color } }),
             h('div', { class: 'body' },
               h('div', { class: 'label' }, e.label),
-              h('div', { class: 'cat-inline' }, MONTH_NAMES[state.month] + ' ' + e.day + ord(e.day)),
+              h('div', { class: 'cat-inline' }, dateLabel),
             ),
             h('div', { class: 'amt' }, '$' + e.amount),
             h('button', { class: 'x',
+              'aria-label': 'Delete ' + e.label,
               onClick: (ev) => { ev.stopPropagation(); removeExpense(e.id); } }, '×'),
           );
         }),
@@ -2037,7 +2137,7 @@
   function renderSettings(d) {
     return h('main', { class: 'shell settings' },
       h('button', { class: 'back-link', onClick: () => { state.route = 'daily'; render(); } },
-        h('span', { innerHTML: '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>' }),
+        icon('chevron-left', 12, 2),
         'Back'),
       h('div', { class: 'settings-head' },
         h('div', { class: 'settings-kicker' }, 'a few preferences'),
@@ -2115,6 +2215,23 @@
         h('div', { class: 'head' }, 'Data'),
         h('div', { class: 'set-row' },
           h('div', {},
+            h('div', { class: 'title' }, 'Backup'),
+            h('div', { class: 'desc' }, 'Download a full JSON backup, or a CSV of just expenses.'),
+          ),
+          h('div', { class: 'data-actions' },
+            h('button', { class: 'btn-secondary', onClick: exportJSON }, 'JSON'),
+            h('button', { class: 'btn-secondary', onClick: exportCSV }, 'CSV'),
+          ),
+        ),
+        h('div', { class: 'set-row' },
+          h('div', {},
+            h('div', { class: 'title' }, 'Import'),
+            h('div', { class: 'desc' }, 'Restore from a JSON backup, or append expenses from a CSV (date, amount, category, note).'),
+          ),
+          h('button', { class: 'btn-secondary', onClick: triggerImport }, 'Import'),
+        ),
+        h('div', { class: 'set-row' },
+          h('div', {},
             h('div', { class: 'title' }, 'Clear all data'),
             h('div', { class: 'desc' }, 'Permanently removes all expenses and resets settings on this device.'),
           ),
@@ -2129,18 +2246,33 @@
   // ============================================================
   function renderFab() {
     return h('div', { class: 'fab-wrap' },
-      h('button', { class: 'fab-pill', onClick: openAddModal },
+      h('button', { class: 'fab-pill', onClick: openAddModal, 'aria-label': 'Log expense' },
         h('span', { class: 'plus' }, '+'), 'Log expense',
       ),
     );
+  }
+
+  function trapModalFocus(modalEl, ev) {
+    if (ev.key !== 'Tab') return;
+    const nodes = modalEl.querySelectorAll(
+      'button:not([disabled]), input:not([disabled]), [tabindex]:not([tabindex="-1"])'
+    );
+    if (!nodes.length) return;
+    const first = nodes[0], last = nodes[nodes.length - 1];
+    if (ev.shiftKey && document.activeElement === first) { ev.preventDefault(); last.focus(); }
+    else if (!ev.shiftKey && document.activeElement === last) { ev.preventDefault(); first.focus(); }
   }
 
   function renderModal(d) {
     const enabledCats = state.categories.filter(c => c.enabled);
     const isEdit = ui.modalEditId != null;
     const submit = isEdit ? submitEdit : submitAdd;
-    return h('div', { class: 'modal-backdrop', onClick: closeModal },
-      h('div', { class: 'modal', onClick: ev => ev.stopPropagation() },
+    return h('div', { class: 'modal-backdrop', onClick: closeModal, role: 'presentation' },
+      h('div', { class: 'modal',
+          role: 'dialog', 'aria-modal': 'true',
+          'aria-label': isEdit ? 'Edit expense' : 'New expense',
+          onClick: ev => ev.stopPropagation(),
+          onKeydown: function(ev) { trapModalFocus(this, ev); } },
         h('div', { class: 'modal-kicker' }, isEdit ? 'Edit expense' : 'New expense'),
         h('div', { class: 'amount-input-wrap' },
           h('span', { class: 'currency' }, '$'),
@@ -2258,7 +2390,21 @@
     render();
   }
   function removeExpense(id) {
-    state.expenses = state.expenses.filter(e => e.id !== id);
+    const idx = state.expenses.findIndex(e => e.id === id);
+    if (idx < 0) return;
+    const expense = state.expenses[idx];
+    state.expenses.splice(idx, 1);
+    if (ui.undoTimer) { clearTimeout(ui.undoTimer); ui.undoTimer = null; }
+    ui.undoExpense = { expense, idx };
+    ui.undoTimer = setTimeout(() => { ui.undoExpense = null; ui.undoTimer = null; render(); }, 4500);
+    render();
+  }
+  function undoRemove() {
+    if (!ui.undoExpense) return;
+    const { expense, idx } = ui.undoExpense;
+    state.expenses.splice(Math.min(idx, state.expenses.length), 0, expense);
+    if (ui.undoTimer) { clearTimeout(ui.undoTimer); ui.undoTimer = null; }
+    ui.undoExpense = null;
     render();
   }
   const NEW_CAT_COLORS = [
@@ -2303,6 +2449,168 @@
     state.selectedDay = TODAY.day;
     render();
   }
+
+  // ============================================================
+  // EXPORT / IMPORT
+  // ============================================================
+  function pad2(n) { return String(n).padStart(2, '0'); }
+  function dateStamp() {
+    const d = new Date();
+    return d.getFullYear() + pad2(d.getMonth() + 1) + pad2(d.getDate());
+  }
+  function downloadBlob(blob, filename) {
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url; a.download = filename;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(url); a.remove(); }, 0);
+  }
+  function csvEscape(s) {
+    s = String(s ?? '');
+    if (/[",\n\r]/.test(s)) return '"' + s.replace(/"/g, '""') + '"';
+    return s;
+  }
+  function parseCSVRow(line) {
+    const cells = [];
+    let cur = '', inQ = false;
+    for (let i = 0; i < line.length; i++) {
+      const ch = line[i];
+      if (inQ) {
+        if (ch === '"' && line[i+1] === '"') { cur += '"'; i++; }
+        else if (ch === '"') inQ = false;
+        else cur += ch;
+      } else {
+        if (ch === '"') inQ = true;
+        else if (ch === ',') { cells.push(cur); cur = ''; }
+        else cur += ch;
+      }
+    }
+    cells.push(cur);
+    return cells;
+  }
+  function flashToast(msg) {
+    if (ui.flashTimer) clearTimeout(ui.flashTimer);
+    ui.flashMsg = msg;
+    ui.flashTimer = setTimeout(() => { ui.flashMsg = null; ui.flashTimer = null; render(); }, 3500);
+    render();
+  }
+
+  function exportJSON() {
+    const payload = {
+      schemaVersion: 1,
+      exportedAt: new Date().toISOString(),
+      expenses: state.expenses,
+      categories: state.categories,
+      monthlyBudget: state.monthlyBudget,
+      budgetsEnabled: state.budgetsEnabled,
+      userName: state.userName,
+      closedDays: state.closedDays,
+      darkMode: state.darkMode,
+    };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    downloadBlob(blob, 'lumen-backup-' + dateStamp() + '.json');
+  }
+
+  function exportCSV() {
+    const catByKey = Object.fromEntries(state.categories.map(c => [c.key, c.label]));
+    const rows = [['date', 'amount', 'category', 'note']];
+    const sorted = state.expenses.slice().sort((a, b) =>
+      a.year - b.year || a.month - b.month || a.day - b.day);
+    for (const e of sorted) {
+      const date = e.year + '-' + pad2(e.month + 1) + '-' + pad2(e.day);
+      rows.push([date, Number(e.amount).toFixed(2), catByKey[e.cat] || e.cat, e.label || '']);
+    }
+    const csv = rows.map(r => r.map(csvEscape).join(',')).join('\n');
+    downloadBlob(new Blob([csv], { type: 'text/csv' }), 'lumen-expenses-' + dateStamp() + '.csv');
+  }
+
+  function triggerImport() {
+    const input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.json,.csv,application/json,text/csv';
+    input.onchange = () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = () => {
+        const text = String(reader.result || '');
+        const isJson = file.name.toLowerCase().endsWith('.json') || text.trim().startsWith('{');
+        if (isJson) importJSON(text);
+        else importCSV(text);
+      };
+      reader.readAsText(file);
+    };
+    input.click();
+  }
+
+  function importJSON(text) {
+    let data;
+    try { data = JSON.parse(text); }
+    catch { flashToast('Could not parse JSON file'); return; }
+    if (!data || typeof data !== 'object') { flashToast('Invalid backup file'); return; }
+    const count = Array.isArray(data.expenses) ? data.expenses.length : 0;
+    const ok = confirm('Restore from backup?\n\nThis replaces all existing data with ' +
+      count + ' expense' + (count === 1 ? '' : 's') + ' from the file.');
+    if (!ok) return;
+    if (Array.isArray(data.expenses)) state.expenses = data.expenses;
+    if (Array.isArray(data.categories)) state.categories = data.categories;
+    if (typeof data.monthlyBudget === 'number') state.monthlyBudget = data.monthlyBudget;
+    if (typeof data.budgetsEnabled === 'boolean') state.budgetsEnabled = data.budgetsEnabled;
+    if (typeof data.userName === 'string') state.userName = data.userName;
+    if (Array.isArray(data.closedDays)) state.closedDays = data.closedDays;
+    if (typeof data.darkMode === 'boolean') state.darkMode = data.darkMode;
+    for (const e of state.expenses) {
+      if (typeof e.year !== 'number') e.year = TODAY.year;
+      if (typeof e.month !== 'number') e.month = TODAY.month;
+    }
+    render();
+    flashToast('Restored ' + state.expenses.length + ' expenses');
+  }
+
+  function importCSV(text) {
+    const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+    if (lines.length < 2) { flashToast('CSV is empty'); return; }
+    const header = parseCSVRow(lines[0]).map(s => s.toLowerCase().trim());
+    const idxDate = header.indexOf('date');
+    const idxAmount = header.indexOf('amount');
+    const idxCat = header.indexOf('category');
+    const idxNote = header.indexOf('note');
+    if (idxDate < 0 || idxAmount < 0 || idxCat < 0) {
+      flashToast('CSV needs date, amount, category columns');
+      return;
+    }
+    const catByLabel = Object.fromEntries(state.categories.map(c => [c.label.toLowerCase(), c.key]));
+    const catByKey = Object.fromEntries(state.categories.map(c => [c.key, c.key]));
+    const otherKey = state.categories.find(c => c.key === 'other')?.key
+      || state.categories[0]?.key
+      || 'other';
+    const additions = [];
+    let skipped = 0;
+    for (let i = 1; i < lines.length; i++) {
+      const cells = parseCSVRow(lines[i]);
+      const dateStr = (cells[idxDate] || '').trim();
+      const amount = parseFloat(cells[idxAmount]);
+      const catStr = (cells[idxCat] || '').trim().toLowerCase();
+      const note = idxNote >= 0 ? (cells[idxNote] || '').trim() : '';
+      const m = /^(\d{4})-(\d{1,2})-(\d{1,2})$/.exec(dateStr);
+      if (!m || !isFinite(amount) || amount <= 0) { skipped++; continue; }
+      additions.push({
+        id: 'e' + Math.random().toString(36).slice(2, 8) + i,
+        year: +m[1], month: +m[2] - 1, day: +m[3],
+        cat: catByLabel[catStr] || catByKey[catStr] || otherKey,
+        label: note,
+        amount,
+      });
+    }
+    if (additions.length === 0) { flashToast('No valid rows found'); return; }
+    const note = skipped > 0 ? '\n(Skipping ' + skipped + ' invalid row' + (skipped === 1 ? '' : 's') + ')' : '';
+    const ok = confirm('Import ' + additions.length + ' expense' +
+      (additions.length === 1 ? '' : 's') + '?' + note);
+    if (!ok) return;
+    state.expenses = [...additions, ...state.expenses];
+    render();
+    flashToast('Imported ' + additions.length + ' expenses');
+  }
   function toggleClosedFor(day) {
     const k = closedKey(state.year, state.month, day);
     const list = (state.closedDays || []).filter(x => typeof x === 'string');
@@ -2312,6 +2620,7 @@
   }
 
   function openAddModal() {
+    ui.focusReturn = { kind: 'fab' };
     ui.modalOpen = true; ui.modalEditId = null;
     ui.modalDay = state.selectedDay; ui.modalAmount = ''; ui.modalLabel = '';
     const otherCat = state.categories.find(c => c.key === 'other' && c.enabled);
@@ -2324,6 +2633,7 @@
   function openEditModal(id) {
     const e = state.expenses.find(x => x.id === id);
     if (!e) return;
+    ui.focusReturn = { kind: 'row', id };
     ui.modalOpen = true; ui.modalEditId = id;
     ui.modalDay = e.day;
     ui.modalAmount = String(Math.round(e.amount * 100));
@@ -2332,14 +2642,26 @@
     render();
     setTimeout(() => document.querySelector('.amount-input-wrap input')?.focus(), 60);
   }
-  function closeModal() { ui.modalOpen = false; ui.modalEditId = null; render(); }
+  function closeModal() {
+    const ret = ui.focusReturn;
+    ui.modalOpen = false; ui.modalEditId = null;
+    ui.focusReturn = null;
+    render();
+    setTimeout(() => {
+      if (!ret) return;
+      if (ret.kind === 'fab') document.querySelector('.fab-pill')?.focus();
+      else if (ret.kind === 'row') document.querySelector('.ledger-row[data-id="' + ret.id + '"]')?.focus();
+    }, 0);
+  }
   function submitAdd() {
     const n = (parseInt(ui.modalAmount, 10) || 0) / 100;
     if (!n || n <= 0) return;
     const catObj = state.categories.find(c => c.key === ui.modalCat);
     const id = 'e' + Math.random().toString(36).slice(2, 8);
     state.expenses.unshift({
-      id, day: ui.modalDay, cat: ui.modalCat,
+      id,
+      year: state.year, month: state.month, day: ui.modalDay,
+      cat: ui.modalCat,
       label: (ui.modalLabel || '').trim() || (catObj?.label.toLowerCase() || 'expense'),
       amount: n,
     });
@@ -2410,6 +2732,40 @@
   });
 
   render();
+
+  // ============================================================
+  // SERVICE WORKER
+  // ============================================================
+  let _swReg = null;
+  let _swReloading = false;
+  function applySwUpdate() {
+    if (!_swReg?.waiting) { location.reload(); return; }
+    _swReg.waiting.postMessage('skipWaiting');
+  }
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('./service-worker.js').then(reg => {
+        _swReg = reg;
+        if (reg.waiting && navigator.serviceWorker.controller) {
+          ui.swUpdateReady = true; render();
+        }
+        reg.addEventListener('updatefound', () => {
+          const nw = reg.installing;
+          if (!nw) return;
+          nw.addEventListener('statechange', () => {
+            if (nw.state === 'installed' && navigator.serviceWorker.controller) {
+              ui.swUpdateReady = true; render();
+            }
+          });
+        });
+      }).catch(() => {});
+      navigator.serviceWorker.addEventListener('controllerchange', () => {
+        if (_swReloading) return;
+        _swReloading = true;
+        location.reload();
+      });
+    });
+  }
 </script>
 </body>
 </html>
