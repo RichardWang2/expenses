@@ -4,6 +4,14 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
 <title>Lumen — Expenses</title>
+<link rel="manifest" href="manifest.json" />
+<meta name="theme-color" content="#f5efe4" media="(prefers-color-scheme: light)" />
+<meta name="theme-color" content="#1d1a14" media="(prefers-color-scheme: dark)" />
+<meta name="apple-mobile-web-app-capable" content="yes" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="apple-mobile-web-app-status-bar-style" content="default" />
+<meta name="apple-mobile-web-app-title" content="Lumen" />
+<link rel="apple-touch-icon" href="icon-192.png" />
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,300;0,9..144,400;0,9..144,500;0,9..144,600;1,9..144,400;1,9..144,500&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
@@ -46,9 +54,9 @@
     color: var(--ink);
     font-family: var(--font-mono);
     -webkit-font-smoothing: antialiased;
-    overscroll-behavior: none;
     transition: background 320ms ease, color 320ms ease;
   }
+  .modal-backdrop { overscroll-behavior: contain; }
   button { font-family: inherit; cursor: pointer; border: none; background: transparent; color: inherit; }
   input { font-family: inherit; outline: none; color: inherit; }
   ::selection { background: var(--ink); color: var(--bg); }
@@ -91,7 +99,12 @@
     border-bottom: 1px solid transparent;
     transition: border-color 200ms ease, background 320ms ease;
   }
-  .topbar.scrolled { border-bottom-color: var(--rule); }
+  .topbar.scrolled {
+    border-bottom-color: var(--rule);
+    background: color-mix(in srgb, var(--bg) 90%, transparent);
+    backdrop-filter: saturate(180%) blur(10px);
+    -webkit-backdrop-filter: saturate(180%) blur(10px);
+  }
   .brand {
     font: 500 11px var(--font-mono); letter-spacing: 0.32em;
     color: var(--ink); text-transform: uppercase;
@@ -104,7 +117,7 @@
     transform: translateY(-1px);
     transition: transform 320ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .brand:hover .dot { transform: translateY(-1px) scale(1.4); }
+  @media (hover: hover) and (pointer: fine) { .brand:hover .dot { transform: translateY(-1px) scale(1.4); } }
   .top-actions { display: flex; align-items: center; gap: 14px; }
   .view-toggle {
     display: inline-flex; align-items: center; gap: 12px;
@@ -140,6 +153,8 @@
   }
   .shell.daily   { animation: slideLeft  320ms cubic-bezier(0.22,1,0.36,1); }
   .shell.monthly { animation: slideRight 320ms cubic-bezier(0.22,1,0.36,1); }
+  .shell.daily, .shell.monthly { touch-action: pan-y; }
+  .shell.swiping { animation: none !important; will-change: transform, opacity; }
   .shell.settings,
   .shell.cat-detail { animation: rise 320ms cubic-bezier(0.22,1,0.36,1); }
 
@@ -304,7 +319,7 @@
     transition: padding-left 220ms cubic-bezier(0.22,1,0.36,1);
   }
   .ledger-row:last-child { border-bottom: 1px solid var(--rule); }
-  .ledger-row:hover { padding-left: 6px; }
+  @media (hover: hover) and (pointer: fine) { .ledger-row:hover { padding-left: 6px; } }
   .ledger-row:active { background: rgba(0,0,0,0.04); margin-inline: -8px; padding-inline: 8px; border-radius: 4px; }
   .palette-night .ledger-row:active { background: rgba(255,255,255,0.04); }
   .ledger-row.ghost { animation: ghostIn 700ms cubic-bezier(0.22,1,0.36,1); }
@@ -385,6 +400,10 @@
   .month-headline {
     font: 400 48px/0.95 var(--font-display);
     letter-spacing: -0.015em;
+    transform-origin: 0 100%;
+    transform: scale(calc(1 - 0.22 * var(--scroll-progress, 0)));
+    opacity: calc(1 - 0.5 * var(--scroll-progress, 0));
+    will-change: transform, opacity;
   }
 
   .month-stats {
@@ -642,13 +661,15 @@
     transition: padding-left 220ms cubic-bezier(0.22,1,0.36,1);
   }
   .cat-row:last-child { border-bottom: 1px solid var(--rule); }
-  .cat-row:hover { padding-left: 6px; }
+  @media (hover: hover) and (pointer: fine) { .cat-row:hover { padding-left: 6px; } }
+  .cat-row:active { background: rgba(0,0,0,0.04); margin-inline: -8px; padding-inline: 8px; border-radius: 4px; }
+  .palette-night .cat-row:active { background: rgba(255,255,255,0.04); }
   .cat-row .dot {
     width: 7px; height: 7px; border-radius: 99px;
     justify-self: center; transform: translateY(-3px);
     transition: transform 200ms;
   }
-  .cat-row:hover .dot { transform: translateY(-3px) scale(1.4); }
+  @media (hover: hover) and (pointer: fine) { .cat-row:hover .dot { transform: translateY(-3px) scale(1.4); } }
   .cat-row .name-block {
     display: flex; flex-direction: column; gap: 4px; min-width: 0;
   }
@@ -688,7 +709,7 @@
     align-self: center;
     transition: transform 220ms cubic-bezier(0.22,1,0.36,1), color 200ms;
   }
-  .cat-row:hover .arrow { transform: translateX(3px); color: var(--ink-soft); }
+  @media (hover: hover) and (pointer: fine) { .cat-row:hover .arrow { transform: translateX(3px); color: var(--ink-soft); } }
 
   /* budgets-off: hide per-row progress bars and budget tail without re-rendering */
   .budgets-off .cat-row .bar-track { display: none; }
@@ -727,7 +748,8 @@
     padding: 0; margin-bottom: 26px;
     transition: color 150ms, transform 200ms;
   }
-  .back-link:hover { color: var(--ink); transform: translateX(-2px); }
+  @media (hover: hover) and (pointer: fine) { .back-link:hover { color: var(--ink); transform: translateX(-2px); } }
+  .back-link:active { color: var(--ink); transform: translateX(-3px); }
 
   .cat-detail-head { margin-bottom: 28px; animation: riseGentle 380ms cubic-bezier(0.22,1,0.36,1); }
   .cat-detail-kicker {
@@ -741,6 +763,10 @@
   .cat-detail-headline {
     font: 400 48px/0.95 var(--font-display);
     letter-spacing: -0.015em; color: var(--ink);
+    transform-origin: 0 100%;
+    transform: scale(calc(1 - 0.22 * var(--scroll-progress, 0)));
+    opacity: calc(1 - 0.5 * var(--scroll-progress, 0));
+    will-change: transform, opacity;
   }
   .cat-budget-line {
     margin-top: 10px;
@@ -790,6 +816,10 @@
   .settings-headline {
     font: 400 44px/0.98 var(--font-display);
     letter-spacing: -0.015em;
+    transform-origin: 0 100%;
+    transform: scale(calc(1 - 0.22 * var(--scroll-progress, 0)));
+    opacity: calc(1 - 0.5 * var(--scroll-progress, 0));
+    will-change: transform, opacity;
   }
   .set-section {
     margin-bottom: 32px;
@@ -828,7 +858,7 @@
     display: flex; align-items: center; justify-content: center;
     transition: color 150ms, background 150ms;
   }
-  .cat-del:hover { color: var(--over); }
+  @media (hover: hover) and (pointer: fine) { .cat-del:hover { color: var(--over); } }
   .cat-del:active { background: var(--over); color: var(--paper); }
   .cat-add {
     margin-top: 14px;
@@ -838,9 +868,9 @@
     padding: 6px 0;
     transition: color 150ms;
   }
-  .cat-add:hover { color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .cat-add:hover { color: var(--ink); } }
   .cat-add .plus { font: 400 16px/1 var(--font-display); color: var(--ink-soft); }
-  .cat-add:hover .plus { color: var(--ink); }
+  @media (hover: hover) and (pointer: fine) { .cat-add:hover .plus { color: var(--ink); } }
   .set-cat-row:last-child { border-bottom: 1px solid var(--rule); }
   .set-cat-row.disabled { opacity: 0.4; }
   .set-cat-row .swatch {
@@ -848,7 +878,7 @@
     border: 1px solid rgba(0,0,0,0.06);
     transition: transform 200ms;
   }
-  .set-cat-row .swatch:hover { transform: scale(1.2); }
+  @media (hover: hover) and (pointer: fine) { .set-cat-row .swatch:hover { transform: scale(1.2); } }
   .set-cat-row .label-input {
     font: 400 16px var(--font-mono); color: var(--ink);
     background: transparent; border: none; outline: none;
@@ -905,7 +935,7 @@
     border-radius: 999px;
     transition: background 150ms, border-color 150ms, color 150ms;
   }
-  .btn-clear:hover { border-color: var(--over-soft); }
+  @media (hover: hover) and (pointer: fine) { .btn-clear:hover { border-color: var(--over-soft); } }
   .btn-clear:active { background: var(--over); color: var(--paper); border-color: var(--over); }
 
   .btn-secondary {
@@ -918,7 +948,7 @@
     transition: background 150ms, border-color 150ms, color 150ms;
     white-space: nowrap;
   }
-  .btn-secondary:hover { border-color: var(--ink-soft); }
+  @media (hover: hover) and (pointer: fine) { .btn-secondary:hover { border-color: var(--ink-soft); } }
   .btn-secondary:active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
   .data-actions { display: flex; flex-wrap: wrap; gap: 8px; }
 
@@ -964,13 +994,72 @@
     transition: transform 220ms cubic-bezier(0.34, 1.56, 0.64, 1);
     animation: rise 460ms 200ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards;
   }
-  .fab-pill:hover { transform: translateY(-2px); }
+  @media (hover: hover) and (pointer: fine) { .fab-pill:hover { transform: translateY(-2px); } }
   .fab-pill:active { transform: translateY(1px) scale(0.96); }
   .fab-pill .plus {
     font-size: 14px; line-height: 1; font-weight: 300;
     transition: transform 240ms cubic-bezier(0.34, 1.56, 0.64, 1);
   }
-  .fab-pill:hover .plus { transform: rotate(90deg); }
+  @media (hover: hover) and (pointer: fine) { .fab-pill:hover .plus { transform: rotate(90deg); } }
+
+  /* ============================================ */
+  /* ACTION SHEET                                 */
+  /* ============================================ */
+  .sheet-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(28,24,18,0.22);
+    backdrop-filter: blur(6px) saturate(110%);
+    -webkit-backdrop-filter: blur(6px) saturate(110%);
+    display: flex; align-items: flex-end; justify-content: center;
+    z-index: 110; animation: fadeIn 200ms ease;
+    overscroll-behavior: contain;
+  }
+  .palette-night .sheet-backdrop { background: rgba(0,0,0,0.5); }
+  .sheet {
+    background: var(--paper);
+    border-top: 1px solid var(--rule-strong);
+    border-left: 1px solid var(--rule-strong);
+    border-right: 1px solid var(--rule-strong);
+    color: var(--ink);
+    width: 100%; max-width: 440px;
+    padding: 22px 18px calc(16px + env(safe-area-inset-bottom));
+    border-radius: 18px 18px 0 0;
+    box-shadow: 0 -20px 60px rgba(28,24,18,0.18);
+    animation: rise 320ms cubic-bezier(0.22,1,0.36,1);
+  }
+  .sheet::before {
+    content: ''; display: block;
+    width: 36px; height: 4px; border-radius: 2px;
+    background: var(--rule-strong);
+    margin: -10px auto 18px;
+  }
+  .sheet-title {
+    font: 500 17px/1.3 var(--font-mono);
+    text-align: center; margin-bottom: 8px;
+  }
+  .sheet-message {
+    font: italic 400 14px/1.5 var(--font-display);
+    color: var(--ink-soft);
+    text-align: center; margin: 0 4px 20px;
+  }
+  .sheet-btn {
+    display: block; width: 100%;
+    padding: 14px;
+    font: 500 12px var(--font-mono); letter-spacing: 0.18em;
+    text-transform: uppercase;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    transition: background 150ms, color 150ms, transform 150ms;
+  }
+  .sheet-btn:last-child { margin-bottom: 0; }
+  .sheet-btn-confirm { background: var(--ink); color: var(--bg); }
+  .sheet-btn-confirm.destructive { background: var(--over); color: var(--paper); }
+  .sheet-btn-confirm:active { transform: scale(0.98); }
+  .sheet-btn-cancel {
+    background: var(--bg-soft); color: var(--ink);
+    border: 1px solid var(--rule);
+  }
+  .sheet-btn-cancel:active { background: var(--rule); }
 
   /* ============================================ */
   /* TOAST                                        */
@@ -998,7 +1087,8 @@
     border-radius: 8px; padding: 6px 10px;
     font: 500 10px var(--font-mono); letter-spacing: 0.18em; text-transform: uppercase;
   }
-  .toast .action:hover { background: rgba(255,255,255,0.2); }
+  @media (hover: hover) and (pointer: fine) { .toast .action:hover { background: rgba(255,255,255,0.2); } }
+  .toast .action:active { background: rgba(255,255,255,0.28); transform: scale(0.96); }
 
   /* ============================================ */
   /* MODAL                                        */
@@ -1010,6 +1100,8 @@
     -webkit-backdrop-filter: blur(6px) saturate(110%);
     display: flex; align-items: flex-end; justify-content: center;
     z-index: 100; animation: fadeIn 240ms ease;
+    padding-bottom: var(--keyboard-inset, 0px);
+    transition: padding-bottom 220ms cubic-bezier(0.22,1,0.36,1);
   }
   .palette-night .modal-backdrop { background: rgba(0,0,0,0.5); }
   .modal {
@@ -1019,17 +1111,29 @@
     border-right: 1px solid var(--rule-strong);
     color: var(--ink);
     width: 100%; max-width: 480px;
-    padding: 26px 24px calc(22px + env(safe-area-inset-bottom));
+    padding: 8px 24px calc(22px + env(safe-area-inset-bottom));
     border-radius: 16px 16px 0 0;
     box-shadow: 0 -20px 60px rgba(28,24,18,0.18);
     animation: rise 320ms cubic-bezier(0.22,1,0.36,1);
+    transform: translateY(0);
+    will-change: transform;
   }
-  .modal::before {
-    content: ''; display: block;
+  .modal.dragging { transition: none; animation: none; }
+  .modal.snap-back { transition: transform 280ms cubic-bezier(0.22,1,0.36,1); }
+  .modal.dismissing { transition: transform 240ms cubic-bezier(0.4,0,1,1); }
+  .modal-grab {
+    margin: 0 -24px 6px;
+    padding: 10px 0 8px;
+    display: flex; justify-content: center;
+    cursor: grab; touch-action: none;
+  }
+  .modal-grab:active { cursor: grabbing; }
+  .modal-grab-bar {
     width: 36px; height: 4px; border-radius: 2px;
     background: var(--rule-strong);
-    margin: -10px auto 16px;
+    transition: background 150ms, width 150ms;
   }
+  .modal.dragging .modal-grab-bar { background: var(--ink-soft); width: 44px; }
   .modal-kicker {
     font: 500 10px var(--font-mono); letter-spacing: 0.26em;
     color: var(--ink-soft); text-transform: uppercase;
@@ -1136,7 +1240,7 @@
       border: 1px solid var(--rule-strong);
       padding: 32px 36px 28px;
     }
-    .modal::before { display: none; }
+    .modal-grab { display: none; }
     .modal-backdrop { align-items: center; }
   }
 </style>
@@ -1454,7 +1558,36 @@
     const toast = renderToast();
     if (toast) root.appendChild(toast);
     if (ui.modalOpen) root.appendChild(renderModal(d));
+    if (ui.sheet) root.appendChild(renderActionSheet());
     saveState();
+  }
+
+  function showSheet(opts) {
+    ui.sheet = {
+      title: opts.title || '',
+      message: opts.message || '',
+      confirmLabel: opts.confirmLabel || 'Confirm',
+      cancelLabel: opts.cancelLabel || 'Cancel',
+      destructive: !!opts.destructive,
+      onConfirm: typeof opts.onConfirm === 'function' ? opts.onConfirm : () => {},
+    };
+    render();
+  }
+  function dismissSheet() { ui.sheet = null; render(); }
+  function renderActionSheet() {
+    const s = ui.sheet;
+    return h('div', { class: 'sheet-backdrop', onClick: dismissSheet, role: 'presentation' },
+      h('div', { class: 'sheet', onClick: ev => ev.stopPropagation(),
+          role: 'dialog', 'aria-modal': 'true', 'aria-label': s.title },
+        h('div', { class: 'sheet-title' }, s.title),
+        s.message ? h('div', { class: 'sheet-message' }, s.message) : null,
+        h('button', {
+          class: 'sheet-btn sheet-btn-confirm' + (s.destructive ? ' destructive' : ''),
+          onClick: () => { const fn = s.onConfirm; ui.sheet = null; render(); fn(); },
+        }, s.confirmLabel),
+        h('button', { class: 'sheet-btn sheet-btn-cancel', onClick: dismissSheet }, s.cancelLabel),
+      ),
+    );
   }
 
   function renderToast() {
@@ -2252,6 +2385,40 @@
     );
   }
 
+  function startModalDrag(ev) {
+    if (ev.button != null && ev.button !== 0) return;
+    const modal = ev.currentTarget.closest('.modal');
+    if (!modal) return;
+    ev.preventDefault();
+    let startY = ev.clientY;
+    let dy = 0;
+    modal.classList.add('dragging');
+    modal.classList.remove('snap-back');
+    const onMove = (e) => {
+      dy = Math.max(0, e.clientY - startY);
+      modal.style.transform = 'translateY(' + dy + 'px)';
+    };
+    const onUp = () => {
+      window.removeEventListener('pointermove', onMove);
+      window.removeEventListener('pointerup', onUp);
+      window.removeEventListener('pointercancel', onUp);
+      modal.classList.remove('dragging');
+      const height = modal.offsetHeight;
+      if (dy > 100 || dy > height * 0.35) {
+        modal.classList.add('dismissing');
+        modal.style.transform = 'translateY(' + (height + 40) + 'px)';
+        setTimeout(closeModal, 220);
+      } else {
+        modal.classList.add('snap-back');
+        modal.style.transform = 'translateY(0)';
+        setTimeout(() => modal.classList.remove('snap-back'), 280);
+      }
+    };
+    window.addEventListener('pointermove', onMove);
+    window.addEventListener('pointerup', onUp);
+    window.addEventListener('pointercancel', onUp);
+  }
+
   function trapModalFocus(modalEl, ev) {
     if (ev.key !== 'Tab') return;
     const nodes = modalEl.querySelectorAll(
@@ -2273,6 +2440,8 @@
           'aria-label': isEdit ? 'Edit expense' : 'New expense',
           onClick: ev => ev.stopPropagation(),
           onKeydown: function(ev) { trapModalFocus(this, ev); } },
+        h('div', { class: 'modal-grab', onPointerdown: startModalDrag, 'aria-label': 'Drag to dismiss' },
+          h('div', { class: 'modal-grab-bar' })),
         h('div', { class: 'modal-kicker' }, isEdit ? 'Edit expense' : 'New expense'),
         h('div', { class: 'amount-input-wrap' },
           h('span', { class: 'currency' }, '$'),
@@ -2424,30 +2593,42 @@
     const cat = state.categories.find(c => c.key === key);
     if (!cat) return;
     const orphans = state.expenses.filter(e => e.cat === key).length;
-    let msg = 'Delete category "' + cat.label + '"?';
-    if (orphans > 0) {
-      msg += '\n\n' + orphans + ' expense' + (orphans === 1 ? '' : 's') + ' in this category will also be removed.';
-    }
-    if (!confirm(msg)) return;
-    state.categories = state.categories.filter(c => c.key !== key);
-    state.expenses = state.expenses.filter(e => e.cat !== key);
-    if (ui.modalCat === key) ui.modalCat = state.categories[0]?.key || null;
-    if (state.viewCat === key) { state.viewCat = null; if (state.route === 'cat-detail') state.route = 'monthly'; }
-    render();
+    const msg = orphans > 0
+      ? orphans + ' expense' + (orphans === 1 ? '' : 's') + ' in this category will also be removed.'
+      : 'This category has no expenses.';
+    showSheet({
+      title: 'Delete "' + cat.label + '"?',
+      message: msg,
+      confirmLabel: 'Delete',
+      destructive: true,
+      onConfirm: () => {
+        state.categories = state.categories.filter(c => c.key !== key);
+        state.expenses = state.expenses.filter(e => e.cat !== key);
+        if (ui.modalCat === key) ui.modalCat = state.categories[0]?.key || null;
+        if (state.viewCat === key) { state.viewCat = null; if (state.route === 'cat-detail') state.route = 'monthly'; }
+        render();
+      },
+    });
   }
 
   function clearAllData() {
-    const ok = confirm('Clear all data?\n\nThis removes every expense and resets your monthly budget to the default.');
-    if (!ok) return;
-    state.expenses = [];
-    state.closedDays = [];
-    state.monthlyBudget = 1000;
-    state.viewCat = null;
-    state.route = 'daily';
-    state.year = TODAY.year;
-    state.month = TODAY.month;
-    state.selectedDay = TODAY.day;
-    render();
+    showSheet({
+      title: 'Clear all data?',
+      message: 'Removes every expense and resets your monthly budget. This cannot be undone.',
+      confirmLabel: 'Clear data',
+      destructive: true,
+      onConfirm: () => {
+        state.expenses = [];
+        state.closedDays = [];
+        state.monthlyBudget = 1000;
+        state.viewCat = null;
+        state.route = 'daily';
+        state.year = TODAY.year;
+        state.month = TODAY.month;
+        state.selectedDay = TODAY.day;
+        render();
+      },
+    });
   }
 
   // ============================================================
@@ -2549,22 +2730,28 @@
     catch { flashToast('Could not parse JSON file'); return; }
     if (!data || typeof data !== 'object') { flashToast('Invalid backup file'); return; }
     const count = Array.isArray(data.expenses) ? data.expenses.length : 0;
-    const ok = confirm('Restore from backup?\n\nThis replaces all existing data with ' +
-      count + ' expense' + (count === 1 ? '' : 's') + ' from the file.');
-    if (!ok) return;
-    if (Array.isArray(data.expenses)) state.expenses = data.expenses;
-    if (Array.isArray(data.categories)) state.categories = data.categories;
-    if (typeof data.monthlyBudget === 'number') state.monthlyBudget = data.monthlyBudget;
-    if (typeof data.budgetsEnabled === 'boolean') state.budgetsEnabled = data.budgetsEnabled;
-    if (typeof data.userName === 'string') state.userName = data.userName;
-    if (Array.isArray(data.closedDays)) state.closedDays = data.closedDays;
-    if (typeof data.darkMode === 'boolean') state.darkMode = data.darkMode;
-    for (const e of state.expenses) {
-      if (typeof e.year !== 'number') e.year = TODAY.year;
-      if (typeof e.month !== 'number') e.month = TODAY.month;
-    }
-    render();
-    flashToast('Restored ' + state.expenses.length + ' expenses');
+    showSheet({
+      title: 'Restore from backup?',
+      message: 'Replaces all existing data with ' + count +
+        ' expense' + (count === 1 ? '' : 's') + ' from the file.',
+      confirmLabel: 'Restore',
+      destructive: true,
+      onConfirm: () => {
+        if (Array.isArray(data.expenses)) state.expenses = data.expenses;
+        if (Array.isArray(data.categories)) state.categories = data.categories;
+        if (typeof data.monthlyBudget === 'number') state.monthlyBudget = data.monthlyBudget;
+        if (typeof data.budgetsEnabled === 'boolean') state.budgetsEnabled = data.budgetsEnabled;
+        if (typeof data.userName === 'string') state.userName = data.userName;
+        if (Array.isArray(data.closedDays)) state.closedDays = data.closedDays;
+        if (typeof data.darkMode === 'boolean') state.darkMode = data.darkMode;
+        for (const e of state.expenses) {
+          if (typeof e.year !== 'number') e.year = TODAY.year;
+          if (typeof e.month !== 'number') e.month = TODAY.month;
+        }
+        render();
+        flashToast('Restored ' + state.expenses.length + ' expenses');
+      },
+    });
   }
 
   function importCSV(text) {
@@ -2603,13 +2790,20 @@
       });
     }
     if (additions.length === 0) { flashToast('No valid rows found'); return; }
-    const note = skipped > 0 ? '\n(Skipping ' + skipped + ' invalid row' + (skipped === 1 ? '' : 's') + ')' : '';
-    const ok = confirm('Import ' + additions.length + ' expense' +
-      (additions.length === 1 ? '' : 's') + '?' + note);
-    if (!ok) return;
-    state.expenses = [...additions, ...state.expenses];
-    render();
-    flashToast('Imported ' + additions.length + ' expenses');
+    const note = skipped > 0
+      ? 'Skipping ' + skipped + ' invalid row' + (skipped === 1 ? '' : 's') + '.'
+      : 'Adds them to your existing expenses.';
+    showSheet({
+      title: 'Import ' + additions.length + ' expense' +
+        (additions.length === 1 ? '' : 's') + '?',
+      message: note,
+      confirmLabel: 'Import',
+      onConfirm: () => {
+        state.expenses = [...additions, ...state.expenses];
+        render();
+        flashToast('Imported ' + additions.length + ' expenses');
+      },
+    });
   }
   function toggleClosedFor(day) {
     const k = closedKey(state.year, state.month, day);
@@ -2705,14 +2899,15 @@
   // ============================================================
   document.addEventListener('keydown', ev => {
     if (ev.key === 'Escape') {
-      if (ui.modalOpen) closeModal();
+      if (ui.sheet) dismissSheet();
+      else if (ui.modalOpen) closeModal();
       else if (state.route === 'settings' || state.route === 'cat-detail') {
         state.route = (state.route === 'cat-detail') ? 'monthly' : 'daily';
         render();
       }
       return;
     }
-    if (ui.modalOpen) return;
+    if (ui.modalOpen || ui.sheet) return;
     if (ev.key === 'ArrowLeft') {
       if (state.route === 'daily') stepDay(-1);
       else if (state.route === 'monthly') stepMonth(-1);
@@ -2722,14 +2917,87 @@
     } else if (ev.key === 'n' || ev.key === 'N') openAddModal();
   });
 
+  // ============================================================
+  // SWIPE PAGING
+  // ============================================================
+  let _swipe = null;
+  document.addEventListener('pointerdown', (ev) => {
+    if (state.route !== 'daily' && state.route !== 'monthly') return;
+    if (ui.modalOpen || ui.sheet) return;
+    if (ev.pointerType === 'mouse' && ev.button !== 0) return;
+    const shell = ev.target.closest('.shell.daily, .shell.monthly');
+    if (!shell) return;
+    if (ev.target.closest('input, textarea, [contenteditable], button, .ledger-row, .cat-row, .cell-btn, .toast')) return;
+    _swipe = { shell, startX: ev.clientX, startY: ev.clientY, dx: 0, dy: 0, decided: null };
+  });
+  document.addEventListener('pointermove', (ev) => {
+    if (!_swipe) return;
+    const s = _swipe;
+    s.dx = ev.clientX - s.startX;
+    s.dy = ev.clientY - s.startY;
+    if (!s.decided) {
+      if (Math.abs(s.dx) < 10 && Math.abs(s.dy) < 10) return;
+      s.decided = (Math.abs(s.dx) > Math.abs(s.dy) * 1.4) ? 'h' : 'v';
+      if (s.decided === 'h') s.shell.classList.add('swiping');
+    }
+    if (s.decided === 'h') {
+      ev.preventDefault();
+      const dx = s.dx;
+      s.shell.style.transform = 'translateX(' + dx + 'px)';
+      s.shell.style.opacity = String(1 - Math.min(0.45, Math.abs(dx) / 800));
+    }
+  }, { passive: false });
+  function endSwipe() {
+    if (!_swipe) return;
+    const s = _swipe; _swipe = null;
+    if (s.decided !== 'h') return;
+    s.shell.classList.remove('swiping');
+    const w = s.shell.offsetWidth;
+    const threshold = Math.max(60, w * 0.18);
+    if (s.dx <= -threshold || s.dx >= threshold) {
+      const dir = s.dx < 0 ? 1 : -1;
+      s.shell.style.transition = 'transform 180ms cubic-bezier(0.4,0,1,1), opacity 180ms';
+      s.shell.style.transform = 'translateX(' + (-dir * (w + 40)) + 'px)';
+      s.shell.style.opacity = '0';
+      setTimeout(() => {
+        if (state.route === 'daily') stepDay(dir);
+        else if (state.route === 'monthly') stepMonth(dir);
+      }, 160);
+    } else {
+      s.shell.style.transition = 'transform 220ms cubic-bezier(0.22,1,0.36,1), opacity 200ms';
+      requestAnimationFrame(() => {
+        s.shell.style.transform = '';
+        s.shell.style.opacity = '';
+      });
+      setTimeout(() => { s.shell.style.transition = ''; }, 240);
+    }
+  }
+  document.addEventListener('pointerup', endSwipe);
+  document.addEventListener('pointercancel', endSwipe);
+
+  if (window.visualViewport) {
+    const updateKeyboardInset = () => {
+      const vv = window.visualViewport;
+      const diff = window.innerHeight - vv.height - vv.offsetTop;
+      const inset = diff > 80 ? diff : 0;
+      document.documentElement.style.setProperty('--keyboard-inset', inset + 'px');
+    };
+    window.visualViewport.addEventListener('resize', updateKeyboardInset);
+    window.visualViewport.addEventListener('scroll', updateKeyboardInset);
+    updateKeyboardInset();
+  }
+
   window.addEventListener('scroll', () => {
-    const s = window.scrollY > 4;
+    const y = window.scrollY;
+    const s = y > 4;
     if (s !== ui.scrolled) {
       ui.scrolled = s;
       const tb = document.querySelector('.topbar');
       if (tb) tb.classList.toggle('scrolled', s);
     }
-  });
+    const progress = Math.min(1, Math.max(0, y / 80));
+    document.documentElement.style.setProperty('--scroll-progress', progress.toFixed(3));
+  }, { passive: true });
 
   render();
 
