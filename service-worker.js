@@ -1,6 +1,6 @@
 'use strict';
 
-const CACHE_VERSION = 'lumen-v10';
+const CACHE_VERSION = 'lumen-v11';
 const APP_SHELL = [
   './',
   './index.html',
