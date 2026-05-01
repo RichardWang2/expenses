@@ -1,0 +1,48 @@
+name: Bump SW cache version
+
+# Whenever main moves, stamp the service worker's CACHE_VERSION with the new
+# commit's short SHA and push it back. The version change forces every client's
+# old cache to be discarded on next page load, so users always get the latest
+# index.html instead of whatever the SW had cached.
+#
+# Loop guard: this workflow's own commits include [skip ci] in the message,
+# which GitHub Actions honors by skipping all triggered workflows.
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  bump:
+    if: ${{ !contains(github.event.head_commit.message, '[skip ci]') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          # full history + token that can push back to main
+          fetch-depth: 0
+
+      - name: Bump CACHE_VERSION to short SHA
+        id: bump
+        run: |
+          SHA=$(git rev-parse --short HEAD)
+          echo "sha=${SHA}" >> "$GITHUB_OUTPUT"
+          # Replace the CACHE_VERSION line in service-worker.js
+          sed -i -E "s|const CACHE_VERSION = '[^']+';|const CACHE_VERSION = 'lumen-${SHA}';|" service-worker.js
+          echo "service-worker.js after bump:"
+          grep CACHE_VERSION service-worker.js
+
+      - name: Commit & push
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add service-worker.js
+          if git diff --cached --quiet; then
+            echo "No change to commit (CACHE_VERSION already up to date)"
+            exit 0
+          fi
+          git commit -m "ci: bump SW cache to lumen-${{ steps.bump.outputs.sha }} [skip ci]"
+          git push
