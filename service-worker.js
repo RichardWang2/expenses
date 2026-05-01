@@ -12,7 +12,9 @@ const APP_SHELL = [
 
 self.addEventListener('install', (event) => {
   event.waitUntil(
-    caches.open(CACHE_VERSION).then((cache) => cache.addAll(APP_SHELL))
+    caches.open(CACHE_VERSION).then((cache) =>
+      cache.addAll(APP_SHELL.map((u) => new Request(u, { cache: 'reload' })))
+    )
   );
 });
 
