@@ -95,10 +95,13 @@
     position: sticky; top: 0; background: var(--bg);
     z-index: 20;
     padding: calc(14px + env(safe-area-inset-top)) 22px 10px;
-    display: flex; justify-content: space-between; align-items: center;
+    display: grid; grid-template-columns: 1fr auto 1fr; align-items: center;
     border-bottom: 1px solid transparent;
     transition: border-color 200ms ease, background 320ms ease;
   }
+  .topbar > :first-child  { justify-self: start; }
+  .topbar > :nth-child(2) { justify-self: center; }
+  .topbar > :last-child   { justify-self: end; }
   .topbar.scrolled {
     border-bottom-color: var(--rule);
     background: color-mix(in srgb, var(--bg) 90%, transparent);
@@ -1691,17 +1694,17 @@
     return h('header', { class: 'topbar' + (ui.scrolled ? ' scrolled' : '') },
       h('button', { class: 'brand', onClick: () => { state.route = 'daily'; render(); } },
         h('span', { class: 'dot' }), 'Lumen'),
-      h('div', { class: 'top-actions' },
-        showViewToggle && h('div', { class: 'view-toggle' },
-          h('button', { class: state.route === 'daily' ? 'active' : '',
-            onClick: () => { state.route = 'daily'; render(); } }, 'Day'),
-          h('button', { class: state.route === 'monthly' ? 'active' : '',
-            onClick: () => { state.route = 'monthly'; render(); } }, 'Month'),
-        ),
-        h('button', { class: 'icon-btn', title: 'Settings',
-          onClick: () => { state.route = 'settings'; render(); } },
-          icon('gear', 16)),
-      ),
+      showViewToggle
+        ? h('div', { class: 'view-toggle' },
+            h('button', { class: state.route === 'daily' ? 'active' : '',
+              onClick: () => { state.route = 'daily'; render(); } }, 'Day'),
+            h('button', { class: state.route === 'monthly' ? 'active' : '',
+              onClick: () => { state.route = 'monthly'; render(); } }, 'Month'),
+          )
+        : h('span', { 'aria-hidden': 'true' }),
+      h('button', { class: 'icon-btn', title: 'Settings',
+        onClick: () => { state.route = 'settings'; render(); } },
+        icon('gear', 16)),
     );
   }
 
