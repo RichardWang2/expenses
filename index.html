@@ -377,6 +377,23 @@
     font-style: normal;
   }
   .close-row { display: flex; justify-content: flex-end; margin-top: 16px; }
+  /* Sort pill row used by the monthly expenses section + cat-detail */
+  .sort-pills {
+    display: flex; flex-wrap: wrap; gap: 6px;
+    margin: -2px 0 14px;
+  }
+  .sort-pill {
+    font: 500 10px var(--font-mono); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 99px;
+    padding: 6px 10px; background: transparent;
+    transition: all 150ms;
+  }
+  @media (hover: hover) and (pointer: fine) { .sort-pill:hover { color: var(--ink); border-color: var(--rule-strong); } }
+  .sort-pill.active { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+
+  .month-expenses .cat-section-head { margin-bottom: 10px; }
+
   .ghost-pill {
     font: 500 10px var(--font-mono); letter-spacing: 0.22em;
     text-transform: uppercase; color: var(--ink-soft);
@@ -845,9 +862,31 @@
   .set-row .toggle-big.on .toggle-knob { transform: translateX(16px); }
 
   .set-cat-row {
-    display: grid; grid-template-columns: 16px 1fr auto;
+    display: grid; grid-template-columns: 16px 1fr auto auto;
     gap: 12px; align-items: center;
     padding: 12px 0; border-top: 1px solid var(--rule);
+  }
+  .set-cat-row .cat-budget-set {
+    display: flex; align-items: baseline; gap: 2px;
+    border-bottom: 1px solid transparent;
+    transition: border-color 150ms;
+  }
+  .set-cat-row .cat-budget-set:focus-within { border-bottom-color: var(--rule); }
+  .set-cat-row .cat-budget-set .currency {
+    font: italic 400 13px var(--font-display); color: var(--ink-soft);
+  }
+  .set-cat-row .cat-budget-set input {
+    width: 64px; font: italic 400 16px var(--font-display); color: var(--ink);
+    background: transparent; border: none; outline: none; padding: 2px 0;
+    text-align: right; font-feature-settings: 'tnum' 1;
+  }
+  .set-cat-row .cat-budget-set input::-webkit-outer-spin-button,
+  .set-cat-row .cat-budget-set input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .cat-default-badge {
+    font: 500 9px var(--font-mono); letter-spacing: 0.22em;
+    text-transform: uppercase; color: var(--ink-soft);
+    border: 1px solid var(--rule); border-radius: 99px;
+    padding: 4px 9px; white-space: nowrap;
   }
   .cat-row-actions { display: flex; align-items: center; gap: 10px; }
   .cat-del {
@@ -973,6 +1012,11 @@
   }
   .budget-set input::-webkit-outer-spin-button,
   .budget-set input::-webkit-inner-spin-button { -webkit-appearance: none; margin: 0; }
+  .budget-set.readonly { border-bottom-color: transparent; }
+  .budget-set .readonly-val {
+    font: italic 400 22px var(--font-display); color: var(--ink);
+    font-feature-settings: 'tnum' 1;
+  }
 
   /* ============================================ */
   /* FAB                                          */
@@ -1311,6 +1355,18 @@
     return s[(v - 20) % 10] || s[v] || s[0];
   }
 
+  // Sort an expense array by date or amount; default is date desc.
+  function sortExpenses(list, key) {
+    const c = list.slice();
+    switch (key) {
+      case 'date-asc':    c.sort((a, b) => a.day - b.day || a.amount - b.amount); break;
+      case 'amount-desc': c.sort((a, b) => b.amount - a.amount || b.day - a.day); break;
+      case 'amount-asc':  c.sort((a, b) => a.amount - b.amount || a.day - b.day); break;
+      default:            c.sort((a, b) => b.day - a.day || b.amount - a.amount); // date-desc
+    }
+    return c;
+  }
+
   // Cents-mode amount helpers: ui.modalAmount holds the typed digits as a
   // cents string (e.g. '1234' for $12.34); display formats with the decimal
   // inserted automatically so the user never types the dot.
@@ -1429,6 +1485,10 @@
     modalDay: TODAY.day, modalAmount: '', modalLabel: '', modalCat: 'food',
     ghostId: null, scrolled: false,
     prevHeroNum: 0,
+    // expense list sorting (monthly page section + per-category drilldown)
+    monthListExpanded: false,
+    monthListSort: 'date-desc',
+    catDetailSort: 'date-desc',
   };
 
   // ============================================================
@@ -1466,8 +1526,13 @@
       }
     }
     const closedCount = closedSet.size;
-    // Daily budget is fixed at monthlyBudget / daysInMonth — closures don't change it.
-    const dailyBudget = state.monthlyBudget / dim_;
+    // When per-category budgets are on, the monthly total is the sum of
+    // category budgets. The user-set monthlyBudget only applies when off.
+    const totalBudget = state.budgetsEnabled
+      ? state.categories.filter(c => c.enabled).reduce((a, c) => a + (c.budget || 0), 0)
+      : state.monthlyBudget;
+    // Daily budget is fixed at totalBudget / daysInMonth — closures don't change it.
+    const dailyBudget = totalBudget / dim_;
     // Each closed day acts as a phantom expense of one daily budget.
     const closedSpend = dailyBudget * closedCount;
     const dayClosed = closedSet.has(D);
@@ -1530,8 +1595,8 @@
     }
 
     return {
-      catByKey, byDay, dim: dim_,
-      dayExp, daySpent, dailyBudget, remaining, overToday, dayClosed,
+      catByKey, byDay, dim: dim_, monthExp,
+      dayExp, daySpent, dailyBudget, totalBudget, remaining, overToday, dayClosed,
       monthSpent, pace, pacePastDays, pastMonthSpent, isCurrentMonth, dayForPace,
       catList,
       closedSet, closedCount, closedSpend,
@@ -1814,6 +1879,73 @@
       renderMonthChart(d),
       renderCalendar(d),
       renderCatBreakdown(d),
+      renderMonthExpenses(d),
+    );
+  }
+
+  // Sort pill control. `pills` is [{key,label},...]. Calls onSelect(key) on click.
+  function renderSortPills(activeKey, onSelect, pills) {
+    return h('div', { class: 'sort-pills' },
+      ...pills.map(p => h('button', {
+        class: 'sort-pill' + (activeKey === p.key ? ' active' : ''),
+        onClick: () => onSelect(p.key) }, p.label)),
+    );
+  }
+
+  const SORT_OPTIONS = [
+    { key: 'date-desc',   label: 'Date ↓' },
+    { key: 'date-asc',    label: 'Date ↑' },
+    { key: 'amount-desc', label: '$ ↓' },
+    { key: 'amount-asc',  label: '$ ↑' },
+  ];
+
+  function renderExpenseListRow(e, catByKey) {
+    const cat = catByKey[e.cat];
+    const ghost = ui.ghostId === e.id ? ' ghost' : '';
+    const catLabel = cat?.label || e.cat;
+    const dateLabel = MONTH_NAMES[state.month].slice(0,3) + ' ' + e.day;
+    return h('div', { class: 'ledger-row' + ghost,
+        onClick: () => openEditModal(e.id),
+        onKeydown: (ev) => { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); openEditModal(e.id); } },
+        role: 'button', tabindex: '0',
+        'data-id': e.id,
+        'aria-label': '$' + e.amount + ' ' + e.label + ', ' + dateLabel + '. Edit expense.' },
+      h('span', { class: 'dot', style: { background: cat?.color || '#888' } }),
+      h('div', { class: 'body' },
+        h('div', { class: 'label' }, e.label),
+        h('div', { class: 'cat-inline' }, dateLabel + ' · ' + catLabel),
+      ),
+      h('div', { class: 'amt' }, '$' + e.amount),
+      h('button', { class: 'x',
+        'aria-label': 'Delete ' + e.label,
+        onClick: (ev) => { ev.stopPropagation(); removeExpense(e.id); } }, '×'),
+    );
+  }
+
+  function renderMonthExpenses(d) {
+    const visible = d.monthExp.filter(e => d.catByKey[e.cat]?.enabled !== false);
+    if (visible.length === 0) return null;
+    const expanded = ui.monthListExpanded;
+    const sortKey = expanded ? ui.monthListSort : 'date-desc';
+    const sorted = sortExpenses(visible, sortKey);
+    const list = expanded ? sorted : sorted.slice(0, 5);
+    const canExpand = visible.length > 5;
+
+    return h('section', { class: 'cat-section month-expenses' },
+      h('div', { class: 'cat-section-head' },
+        h('h2', { class: 'ttl' }, expanded ? 'All expenses · ' + visible.length : 'Recent'),
+        h('div', { class: 'right' },
+          expanded
+            ? h('button', { class: 'ghost-pill',
+                onClick: () => { ui.monthListExpanded = false; render(); } }, 'Show less')
+            : canExpand && h('button', { class: 'ghost-pill',
+                onClick: () => { ui.monthListExpanded = true; render(); } }, 'Show all'),
+        ),
+      ),
+      expanded && renderSortPills(ui.monthListSort, (k) => { ui.monthListSort = k; render(); }, SORT_OPTIONS),
+      h('div', { class: 'ledger-section' },
+        ...list.map(e => renderExpenseListRow(e, d.catByKey)),
+      ),
     );
   }
 
@@ -1832,7 +1964,7 @@
   }
 
   function renderMonthHero(d) {
-    const remaining = state.monthlyBudget - d.monthSpent;
+    const remaining = d.totalBudget - d.monthSpent;
     const isOver = remaining < 0;
     let paceVal, paceClass = 'muted', paceSub;
     if (Math.abs(d.pace) < 10) { paceVal = 'On track'; paceSub = 'Pacing well'; }
@@ -1840,8 +1972,8 @@
     else { paceVal = '−$' + Math.round(-d.pace); paceClass = 'under'; paceSub = 'Under pace'; }
 
     const budgetSub = d.closedCount > 0
-      ? 'of $' + state.monthlyBudget + ' · ' + d.closedCount + ' closed'
-      : 'of $' + state.monthlyBudget;
+      ? 'of $' + Math.round(d.totalBudget) + ' · ' + d.closedCount + ' closed'
+      : 'of $' + Math.round(d.totalBudget);
 
     return h('section', {},
       h('div', { class: 'month-headline-wrap' },
@@ -1872,7 +2004,7 @@
   function renderMonthChart(d) {
     const W = 320, H = 160, PT = 16, PB = 12, PL = 6, PR = 6;
     const days = d.dim;
-    const dailyBudget = state.monthlyBudget / days;
+    const dailyBudget = d.totalBudget / days;
 
     // cumulative spend up to each day (1..days). Closed days contribute the
     // daily budget as a phantom amount, matching monthSpent semantics.
@@ -1893,7 +2025,7 @@
     const drawUntil = d.pacePastDays;
 
     // chart scales
-    const yMax = Math.max(state.monthlyBudget, cumActual[drawUntil - 1] || 0) * 1.05;
+    const yMax = Math.max(d.totalBudget, cumActual[drawUntil - 1] || 0) * 1.05;
     const xFor = (day) => PL + ((day - 1) / (days - 1)) * (W - PL - PR);
     const yFor = (val) => PT + (1 - val / yMax) * (H - PT - PB);
 
@@ -2044,20 +2176,6 @@
     return h('section', { class: 'cat-section' },
       h('div', { class: 'cat-section-head' },
         h('h2', { class: 'ttl' }, 'By category'),
-        h('div', { class: 'right' },
-          h('div', { class: 'toggle-mini-row' },
-            'Budgets',
-            h('button', { class: 'toggle' + (state.budgetsEnabled ? ' on' : ''),
-              onClick: (ev) => {
-                state.budgetsEnabled = !state.budgetsEnabled;
-                document.body.classList.toggle('budgets-off', !state.budgetsEnabled);
-                ev.currentTarget.classList.toggle('on', state.budgetsEnabled);
-              },
-              'aria-label': 'Toggle per-category budgets' },
-              h('div', { class: 'toggle-knob' }),
-            ),
-          ),
-        ),
       ),
       renderDonut(d),
       ...d.catList.map((c, i) => renderCatRow(c, d, i)),
@@ -2199,7 +2317,7 @@
     const exp = state.expenses.filter(e =>
       e.cat === cat.key && e.year === state.year && e.month === state.month);
     const total = exp.reduce((a, b) => a + b.amount, 0);
-    const sorted = exp.slice().sort((a, b) => b.day - a.day || b.amount - a.amount);
+    const sorted = sortExpenses(exp, ui.catDetailSort);
     const avg = exp.length > 0 ? total / exp.length : 0;
     const largest = exp.reduce((m, e) => e.amount > (m?.amount || 0) ? e : m, null);
 
@@ -2236,6 +2354,8 @@
           h('h2', { class: 'ttl' }, 'All entries'),
           h('div', { class: 'meta' }, exp.length + (exp.length === 1 ? ' charge' : ' charges')),
         ),
+        exp.length > 1 && renderSortPills(ui.catDetailSort,
+          (k) => { ui.catDetailSort = k; render(); }, SORT_OPTIONS),
         ...sorted.map(e => {
           const ghost = ui.ghostId === e.id ? ' ghost' : '';
           const dateLabel = MONTH_NAMES[state.month] + ' ' + e.day + ord(e.day);
@@ -2292,22 +2412,50 @@
       ),
       h('section', { class: 'set-section' },
         h('div', { class: 'head' }, 'Budget'),
-        h('div', { class: 'set-row set-row-input' },
+        h('div', { class: 'set-row' },
           h('div', {},
-            h('div', { class: 'title' }, 'Monthly budget'),
-            h('div', { class: 'desc' }, 'Your spending target for the month. Drives the daily pace and the under/over figures.'),
+            h('div', { class: 'title' }, 'Per-category budgets'),
+            h('div', { class: 'desc' }, state.budgetsEnabled
+              ? 'Each category has its own budget. The monthly total is their sum.'
+              : 'A single monthly cap. Categories track spend but have no per-row limits.'),
           ),
-          h('div', { class: 'budget-set' },
-            h('span', { class: 'currency' }, '$'),
-            h('input', { type: 'number', min: '0', step: '10', inputmode: 'decimal',
-              value: String(state.monthlyBudget),
-              onInput: ev => {
-                const v = parseFloat(ev.target.value);
-                if (!isNaN(v) && v >= 0) state.monthlyBudget = v;
-              },
-              onBlur: () => render() }),
+          h('button', { class: 'toggle toggle-big' + (state.budgetsEnabled ? ' on' : ''),
+            onClick: () => {
+              state.budgetsEnabled = !state.budgetsEnabled;
+              document.body.classList.toggle('budgets-off', !state.budgetsEnabled);
+              render();
+            },
+            'aria-label': 'Toggle per-category budgets' },
+            h('div', { class: 'toggle-knob' }),
           ),
         ),
+        state.budgetsEnabled
+          ? h('div', { class: 'set-row set-row-input' },
+              h('div', {},
+                h('div', { class: 'title' }, 'Monthly total'),
+                h('div', { class: 'desc' }, 'Sum of category budgets — edit each category below to change it.'),
+              ),
+              h('div', { class: 'budget-set readonly' },
+                h('span', { class: 'currency' }, '$'),
+                h('span', { class: 'readonly-val' }, Math.round(d.totalBudget)),
+              ),
+            )
+          : h('div', { class: 'set-row set-row-input' },
+              h('div', {},
+                h('div', { class: 'title' }, 'Monthly cap'),
+                h('div', { class: 'desc' }, 'Your spending target for the month. Drives the daily pace and the under/over figures.'),
+              ),
+              h('div', { class: 'budget-set' },
+                h('span', { class: 'currency' }, '$'),
+                h('input', { type: 'number', min: '0', step: '10', inputmode: 'decimal',
+                  value: String(state.monthlyBudget),
+                  onInput: ev => {
+                    const v = parseFloat(ev.target.value);
+                    if (!isNaN(v) && v >= 0) state.monthlyBudget = v;
+                  },
+                  onBlur: () => render() }),
+              ),
+            ),
       ),
       h('section', { class: 'set-section' },
         h('div', { class: 'head' }, 'Appearance'),
@@ -2325,22 +2473,34 @@
       ),
       h('section', { class: 'set-section' },
         h('div', { class: 'head' }, 'Categories'),
-        ...state.categories.map(c => h('div', { class: 'set-cat-row' + (c.enabled ? '' : ' disabled') },
-          h('button', { class: 'swatch', style: { background: c.color },
-            'aria-label': 'Color: ' + c.color }),
-          h('input', { class: 'label-input', type: 'text', value: c.label,
-            onInput: ev => { c.label = ev.target.value; },
-            onBlur: () => render() }),
-          h('div', { class: 'cat-row-actions' },
-            h('button', { class: 'toggle' + (c.enabled ? ' on' : ''),
-              onClick: () => { c.enabled = !c.enabled; render(); },
-              'aria-label': 'Enable ' + c.label },
-              h('div', { class: 'toggle-knob' }),
+        ...state.categories.map(c => {
+          const isDefault = c.key === 'other';
+          return h('div', { class: 'set-cat-row' + (c.enabled ? '' : ' disabled') },
+            h('button', { class: 'swatch', style: { background: c.color },
+              'aria-label': 'Color: ' + c.color }),
+            h('input', { class: 'label-input', type: 'text', value: c.label,
+              onInput: ev => { c.label = ev.target.value; },
+              onBlur: () => render() }),
+            state.budgetsEnabled && h('div', { class: 'cat-budget-set' },
+              h('span', { class: 'currency' }, '$'),
+              h('input', { type: 'number', min: '0', step: '10', inputmode: 'decimal',
+                value: String(c.budget || 0),
+                onInput: ev => { c.budget = parseInt(ev.target.value, 10) || 0; },
+                onBlur: () => render(),
+                'aria-label': 'Budget for ' + c.label }),
             ),
-            h('button', { class: 'cat-del', onClick: () => removeCategory(c.key),
-              'aria-label': 'Delete ' + c.label }, '×'),
-          ),
-        )),
+            h('div', { class: 'cat-row-actions' },
+              isDefault
+                ? h('span', { class: 'cat-default-badge', title: 'Default category — always on' }, 'Default')
+                : h('button', { class: 'toggle' + (c.enabled ? ' on' : ''),
+                    onClick: () => { c.enabled = !c.enabled; render(); },
+                    'aria-label': 'Enable ' + c.label },
+                    h('div', { class: 'toggle-knob' })),
+              !isDefault && h('button', { class: 'cat-del', onClick: () => removeCategory(c.key),
+                'aria-label': 'Delete ' + c.label }, '×'),
+            ),
+          );
+        }),
         h('button', { class: 'cat-add', onClick: addCategory },
           h('span', { class: 'plus' }, '+'), 'Add category'),
       ),
@@ -2590,11 +2750,12 @@
     render();
   }
   function removeCategory(key) {
+    if (key === 'other') return; // 'Other' is the cascade target — never deletable
     const cat = state.categories.find(c => c.key === key);
     if (!cat) return;
     const orphans = state.expenses.filter(e => e.cat === key).length;
     const msg = orphans > 0
-      ? orphans + ' expense' + (orphans === 1 ? '' : 's') + ' in this category will also be removed.'
+      ? orphans + ' expense' + (orphans === 1 ? '' : 's') + ' in this category will move to Other.'
       : 'This category has no expenses.';
     showSheet({
       title: 'Delete "' + cat.label + '"?',
@@ -2603,7 +2764,7 @@
       destructive: true,
       onConfirm: () => {
         state.categories = state.categories.filter(c => c.key !== key);
-        state.expenses = state.expenses.filter(e => e.cat !== key);
+        state.expenses = state.expenses.map(e => e.cat === key ? { ...e, cat: 'other' } : e);
         if (ui.modalCat === key) ui.modalCat = state.categories[0]?.key || null;
         if (state.viewCat === key) { state.viewCat = null; if (state.route === 'cat-detail') state.route = 'monthly'; }
         render();
